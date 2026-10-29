@@ -31,7 +31,7 @@ async function handleLogin(e){
 
   if (profileError || !profile) {
     console.error("Erro detalhado do Supabase:", profileError);
-    err.textContent = `Erro: ${profileError?.message || 'Perfil não encontrado na tabela'}`;
+    err.textContent = `Erro: ${profileError?.message || 'Perfil não encontrado'}`;
     err.classList.remove('hidden');
     await window.db.auth.signOut();
     btn.textContent = 'Entrar';
@@ -39,7 +39,7 @@ async function handleLogin(e){
     return;
   }
 
-  // 3. Mapeia os dados do banco (snake_case) para o frontend (camelCase)
+  // 3. Mapeia os dados (snake_case do banco para camelCase do frontend)
   const formattedProfile = {
     ...profile,
     companyId: profile.company_id,
