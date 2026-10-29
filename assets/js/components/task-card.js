@@ -9,19 +9,17 @@ function taskHTML(t, compId, objId){
   const autoLate = eff === 'Atrasada' && t.status !== 'Atrasada';
   
   const isOpen = state._openTasks && state._openTasks.includes(t.id);
-  const respName = userById(t.responsibleId)?.name || 'Sem responsável';
   const descText = t.description || '(Nova tarefa sem descrição)';
 
   return `
   <div class="task-card ${isOpen ? 'open' : ''}" id="task-${t.id}" data-task-id="${t.id}">
     
-    <!-- Cabeçalho da Tarefa (Sempre visível) -->
+    <!-- Cabeçalho (Sempre visível) -->
     <div class="task-header" onclick="toggleTask('${t.id}')">
       <span class="chevron">▶</span>
       <div class="task-summary">
         <span class="desc">${escapeHtml(descText)}</span>
         <span class="tag" style="background:${autoLate?'#fee2e2':'var(--gray-100)'};color:${autoLate?'#991b1b':'var(--gray-600)'}">${eff}</span>
-        <span style="font-size:11px;color:var(--gray-400);font-weight:normal">👤 ${escapeHtml(respName)}</span>
       </div>
       <div class="task-actions" onclick="event.stopPropagation()">
         <button title="Histórico" onclick="openHistory('${t.id}')">◔</button>
@@ -29,7 +27,7 @@ function taskHTML(t, compId, objId){
       </div>
     </div>
 
-    <!-- Corpo da Tarefa (Oculto por padrão) -->
+    <!-- Corpo da Tarefa (Visual original) -->
     <div class="task-body">
       <div class="task-top">
         <input class="task-desc" value="${escapeHtml(t.description)}" placeholder="O que precisa ser feito?"
@@ -54,7 +52,7 @@ function taskHTML(t, compId, objId){
                  onchange="updateTask('${compId}','${t.id}','endDate',this.value)">
         </div>
         <div class="task-field">
-          <label>Status</label>
+          <label>Status ${autoLate ? `<span class="late-badge">⚠ Atrasada</span>` : ''}</label>
           <select class="status-select" data-status="${t.status}" ${edit?'':'disabled'}
                   onchange="updateTask('${compId}','${t.id}','status',this.value); this.dataset.status=this.value;">
             ${STATUS_OPTIONS.map(s => `<option ${s===t.status?'selected':''}>${s}</option>`).join('')}
@@ -110,7 +108,6 @@ function toggleTask(id) {
 }
 
 function openHistory(taskId){
-  // ... mantém o código igual ao anterior ...
   const entries = historyFor(taskId);
   const found = findTask(taskId);
   const title = found ? (found.task.description || '(sem descrição)') : 'Tarefa';
