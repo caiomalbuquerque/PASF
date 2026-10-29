@@ -59,8 +59,11 @@ function objectiveHTML(o, idx, compId){
   const canEditObj = can('editObj');
   const canAddTask = can('addTask');
 
+  // Verifica se este objetivo deve estar aberto no estado global
+  const isOpen = state._openObjectives && state._openObjectives.includes(o.id);
+
   return `
-  <div class="objective-card" id="obj-${o.id}" data-id="${o.id}">
+  <div class="objective-card ${isOpen ? 'open' : ''}" id="obj-${o.id}" data-id="${o.id}">
     <div class="objective-header" onclick="toggleObjective('${o.id}')">
       <span class="chevron">▶</span>
       <span class="objective-num">${String(idx+1).padStart(2,'0')}</span>
@@ -101,7 +104,23 @@ function objectiveHTML(o, idx, compId){
   </div>`;
 }
 
-function toggleObjective(id){ $(`obj-${id}`)?.classList.toggle('open'); }
+function toggleObjective(id){ 
+  const el = $(`obj-${id}`);
+  if(!el) return;
+  
+  if (el.classList.contains('open')) {
+    el.classList.remove('open');
+    if(state._openObjectives) {
+      state._openObjectives = state._openObjectives.filter(x => x !== id);
+    }
+  } else {
+    el.classList.add('open');
+    if(!state._openObjectives) state._openObjectives = [];
+    if(!state._openObjectives.includes(id)) {
+      state._openObjectives.push(id);
+    }
+  }
+}
 
 function openNewObjectiveModal(){
   if(!can('createObj')) return;
