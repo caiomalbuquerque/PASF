@@ -32,7 +32,6 @@ async function createObjective(title, savings){
   renderObjectives();
 }
 
-
 // Variável global para guardar qual tarefa está sendo arrastada
 let draggedTaskId = null;
 
