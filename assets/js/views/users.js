@@ -16,7 +16,7 @@ function renderUsers(){
       ${can('manageUsers') ? `<button class="btn btn-primary" onclick="openNewUserModal()">+ Novo responsável</button>` : ''}
     </div>
     <div class="panel"><table class="admin-table">
-      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Empresa</th><th>Gestor</th><th>Tarefas</th></tr></thead>
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Empresa</th><th>Gestor</th><th>Tarefas</th><th>Ações</th></tr></thead>
       <tbody>
         ${list.map(u => {
           const comp = u.companyId ? companyById(u.companyId)?.name : 'Todas';
@@ -31,16 +31,28 @@ function renderUsers(){
             <td>${comp}</td>
             <td>${gestor}</td>
             <td>${count}</td>
+            <td>
+              ${can('manageUsers') ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px" onclick="openEditUserModal('${u.id}')" title="Editar">✎</button>` : '—'}
+            </td>
           </tr>`;
         }).join('')}
       </tbody>
     </table></div>`;
 }
 
-/* ---- Lógica de Criação de Usuário ---- */
+function toggleCompanyField(role, prefix = 'newUser') {
+  const isGlobal = role.startsWith('global_') || role === 'admin';
+  const lbl = $(`lblCompany_${prefix}`);
+  const sel = $(`${prefix}Company`);
+  if(isGlobal){
+    lbl.style.opacity = '0.5'; sel.style.opacity = '0.5'; sel.disabled = true; sel.value = '';
+  } else {
+    lbl.style.opacity = '1'; sel.style.opacity = '1'; sel.disabled = false;
+  }
+}
 
+/* ---- Criar Usuário ---- */
 function openNewUserModal(){
-  // Filtra apenas gestores/admins para a lista de "Manager"
   const managers = state.users.filter(u => ['admin', 'global_collaborator', 'unique_collaborator'].includes(u.role));
   
   openModal(`
@@ -51,16 +63,14 @@ function openNewUserModal(){
     <div class="modal-body">
       <label>Nome Completo</label>
       <input id="newUserName" placeholder="Ex: João da Silva" required>
-      
       <label>E-mail Corporativo</label>
       <input id="newUserEmail" type="email" placeholder="joao@fghsaude.org.br" required>
-      
       <label>Senha Provisória</label>
       <input id="newUserPass" type="text" value="PASF@2026" required>
       <small style="color:var(--gray-500);font-size:11px;display:block;margin-top:4px">O usuário poderá alterar depois.</small>
 
       <label>Perfil de Acesso</label>
-      <select id="newUserRole" onchange="toggleCompanyField(this.value)">
+      <select id="newUserRole" onchange="toggleCompanyField(this.value, 'newUser')">
         <option value="unique_user">Usuário (Empresa)</option>
         <option value="unique_collaborator">Gestor (Empresa)</option>
         <option value="unique_viewer">Viewer (Empresa)</option>
@@ -69,40 +79,22 @@ function openNewUserModal(){
         <option value="admin">Administrador</option>
       </select>
 
-      <label id="lblCompany">Empresa Vinculada</label>
+      <label id="lblCompany_newUser">Empresa Vinculada</label>
       <select id="newUserCompany">
         ${state.companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
       </select>
 
-      <label>Gestor Imediato (Notificações)</label>
+      <label>Gestor Imediato</label>
       <select id="newUserManager">
         <option value="">Nenhum (Topo da Hierarquia)</option>
         ${managers.map(m => `<option value="${m.id}">${m.name} (${ROLE_LABELS[m.role]})</option>`).join('')}
       </select>
-
       <div id="newUserError" class="login-error hidden" style="margin-top:14px"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" id="btnCreateUser" onclick="submitNewUser(this)">Criar Usuário</button>
+      <button class="btn btn-primary" id="btnCreateUser" onclick="submitNewUser(this)">Criar</button>
     </div>`);
-}
-
-// Esconde o campo de empresa se o perfil for global/admin
-function toggleCompanyField(role){
-  const isGlobal = role.startsWith('global_') || role === 'admin';
-  const lbl = $('lblCompany');
-  const sel = $('newUserCompany');
-  if(isGlobal){
-    lbl.style.opacity = '0.5';
-    sel.style.opacity = '0.5';
-    sel.disabled = true;
-    sel.value = '';
-  } else {
-    lbl.style.opacity = '1';
-    sel.style.opacity = '1';
-    sel.disabled = false;
-  }
 }
 
 async function submitNewUser(btn){
@@ -114,56 +106,97 @@ async function submitNewUser(btn){
   const manager_id = $('newUserManager').value || null;
   const errDiv = $('newUserError');
 
-  if(!name || !email || !pass) {
-    errDiv.textContent = 'Preencha nome, e-mail e senha.';
-    errDiv.classList.remove('hidden');
-    return;
-  }
+  if(!name || !email || !pass) { errDiv.textContent = 'Preencha nome, e-mail e senha.'; errDiv.classList.remove('hidden'); return; }
 
-  btn.textContent = 'Criando...';
-  btn.disabled = true;
-  errDiv.classList.add('hidden');
+  btn.textContent = 'Criando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  // Cria uma instância secundária do Supabase APENAS para cadastrar o usuário
-  // Isso impede que a sessão do Admin logado seja substituída pela do novo usuário.
   const tempSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  
-  // Faz o signUp com os metadados (o trigger lá no banco vai ler e preencher a tabela profiles)
   const { data, error } = await tempSupabase.auth.signUp({
-    email: email,
-    password: pass,
-    options: {
-      data: {
-        name: name,
-        role: role,
-        company_id: company_id,
-        manager_id: manager_id
-      }
-    }
+    email, password: pass,
+    options: { data: { name, role, company_id, manager_id } }
   });
 
-  if (error) {
-    errDiv.textContent = error.message;
-    errDiv.classList.remove('hidden');
-    btn.textContent = 'Criar Usuário';
-    btn.disabled = false;
-    return;
-  }
+  if (error) { errDiv.textContent = error.message; errDiv.classList.remove('hidden'); btn.textContent = 'Criar'; btn.disabled = false; return; }
 
-  // Se deu certo, fecha o modal e recarrega a lista de usuários
   btn.closest('.modal-overlay').remove();
-  alert(`Usuário ${name} criado com sucesso!\nSenha provisória: ${pass}`);
-  
-  // Puxa a lista atualizada de perfis do banco
+  alert(`Usuário ${name} criado!\nSenha provisória: ${pass}`);
+  await refreshUsersList();
+}
+
+/* ---- Editar Usuário ---- */
+function openEditUserModal(userId) {
+  const u = state.users.find(x => x.id === userId);
+  if (!u) return;
+  const managers = state.users.filter(m => ['admin', 'global_collaborator', 'unique_collaborator'].includes(m.role) && m.id !== u.id);
+
+  openModal(`
+    <div class="modal-header">
+      <h3>Editar Responsável</h3>
+      <button onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>Nome Completo</label>
+      <input id="editUserName" value="${escapeHtml(u.name)}" required>
+      <label>E-mail (Não editável)</label>
+      <input value="${u.email}" disabled style="opacity:0.6">
+      
+      <label>Perfil de Acesso</label>
+      <select id="editUserRole" onchange="toggleCompanyField(this.value, 'editUser')">
+        <option value="unique_user" ${u.role==='unique_user'?'selected':''}>Usuário (Empresa)</option>
+        <option value="unique_collaborator" ${u.role==='unique_collaborator'?'selected':''}>Gestor (Empresa)</option>
+        <option value="unique_viewer" ${u.role==='unique_viewer'?'selected':''}>Viewer (Empresa)</option>
+        <option value="global_collaborator" ${u.role==='global_collaborator'?'selected':''}>Colaborador Global</option>
+        <option value="global_viewer" ${u.role==='global_viewer'?'selected':''}>Viewer Global</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>Administrador</option>
+      </select>
+
+      <label id="lblCompany_editUser">Empresa Vinculada</label>
+      <select id="editUserCompany" ${(!u.companyId)?'disabled':''}>
+        ${state.companies.map(c => `<option value="${c.id}" ${u.companyId==c.id?'selected':''}>${c.name}</option>`).join('')}
+      </select>
+
+      <label>Gestor Imediato</label>
+      <select id="editUserManager">
+        <option value="">Nenhum (Topo da Hierarquia)</option>
+        ${managers.map(m => `<option value="${m.id}" ${u.gestorId===m.id?'selected':''}>${m.name} (${ROLE_LABELS[m.role]})</option>`).join('')}
+      </select>
+      <div id="editUserError" class="login-error hidden" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+      <button class="btn btn-primary" id="btnEditUser" onclick="submitEditUser('${u.id}', this)">Salvar Alterações</button>
+    </div>`);
+    
+  // Trigger o visual do select de empresa correto
+  toggleCompanyField(u.role, 'editUser');
+}
+
+async function submitEditUser(userId, btn) {
+  const name = $('editUserName').value.trim();
+  const role = $('editUserRole').value;
+  const company_id = $('editUserCompany').disabled ? null : $('editUserCompany').value;
+  const manager_id = $('editUserManager').value || null;
+  const errDiv = $('editUserError');
+
+  if(!name) { errDiv.textContent = 'O nome é obrigatório.'; errDiv.classList.remove('hidden'); return; }
+
+  btn.textContent = 'Salvando...'; btn.disabled = true; errDiv.classList.add('hidden');
+
+  const { error } = await window.db.from('profiles').update({
+    name, role, company_id, manager_id
+  }).eq('id', userId);
+
+  if (error) { errDiv.textContent = error.message; errDiv.classList.remove('hidden'); btn.textContent = 'Salvar'; btn.disabled = false; return; }
+
+  btn.closest('.modal-overlay').remove();
+  alert('Usuário atualizado com sucesso!');
   await refreshUsersList();
 }
 
 async function refreshUsersList(){
   const { data: profiles } = await window.db.from('profiles').select('*');
   state.users = (profiles || []).map(p => ({
-    ...p,
-    companyId: p.company_id,
-    gestorId: p.manager_id
+    ...p, companyId: p.company_id, gestorId: p.manager_id
   }));
   renderUsers();
 }
