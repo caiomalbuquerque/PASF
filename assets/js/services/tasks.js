@@ -98,4 +98,56 @@ async function removeTask(compId, objId, taskId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(o) o.tasks = o.tasks.filter(t => t.id !== taskId);
   renderObjectives();
+
+  /* Substitua addAttachments e removeAttachment em services/tasks.js */
+
+async function addAttachments(compId, taskId, input){
+  const found = findTask(taskId);
+  if(!found) return;
+  
+  const files = Array.from(input.files || []);
+  for (const file of files) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${taskId}/${uid()}.${fileExt}`;
+    
+    // 1. Upload para o Storage
+    const { error: uploadError } = await window.db.storage
+      .from('task-attachments')
+      .upload(fileName, file);
+
+    if (uploadError) { alert("Erro no upload: " + uploadError.message); continue; }
+
+    // 2. Salva os metadados na tabela
+    const { data, error } = await window.db.from('task_attachments').insert([{
+      task_id: taskId,
+      file_name: file.name,
+      file_path: fileName,
+      uploaded_by: state.currentUser.id
+    }]).select().single();
+
+    if (!error) {
+      found.task.attachments = found.task.attachments || [];
+      found.task.attachments.push({ id: data.id, name: data.file_name, path: data.file_path });
+    }
+  }
+  input.value = '';
+  renderObjectives();
+}
+
+async function removeAttachment(compId, taskId, attachId){
+  const found = findTask(taskId);
+  if(!found) return;
+  
+  const attach = found.task.attachments.find(a => a.id === attachId);
+  
+  // 1. Remove do Storage
+  if(attach?.path) {
+    await window.db.storage.from('task-attachments').remove([attach.path]);
+  }
+  // 2. Remove do Banco
+  await window.db.from('task_attachments').delete().eq('id', attachId);
+  
+  found.task.attachments = found.task.attachments.filter(a => a.id !== attachId);
+  renderObjectives();
+}
 }
