@@ -1,4 +1,4 @@
-/* Acesso restrito — apenas admin e global_collaborator (regra de 2026-10-29). */
+/* Acesso restrito — apenas admin e global_collaborator */
 function renderUsers(){
   const el = $('view-responsaveis');
   if(!can('seeUsers')){
@@ -13,7 +13,7 @@ function renderUsers(){
     <div class="page-header">
       <div><h1>Responsáveis</h1>
         <p>Pessoas que podem receber tarefas${scopeAll?' (todas as empresas)':` (${companyById(state.currentCompany)?.name||''})`}.</p></div>
-      ${can('manageUsers') ? `<button class="btn btn-primary" onclick="alert('Cadastro de novo usuário — implementar no backend.')">+ Novo responsável</button>` : ''}
+      ${can('manageUsers') ? `<button class="btn btn-primary" onclick="openNewUserModal()">+ Novo responsável</button>` : ''}
     </div>
     <div class="panel"><table class="admin-table">
       <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Empresa</th><th>Gestor</th><th>Tarefas</th></tr></thead>
@@ -35,4 +35,135 @@ function renderUsers(){
         }).join('')}
       </tbody>
     </table></div>`;
+}
+
+/* ---- Lógica de Criação de Usuário ---- */
+
+function openNewUserModal(){
+  // Filtra apenas gestores/admins para a lista de "Manager"
+  const managers = state.users.filter(u => ['admin', 'global_collaborator', 'unique_collaborator'].includes(u.role));
+  
+  openModal(`
+    <div class="modal-header">
+      <h3>Novo Responsável</h3>
+      <button onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>Nome Completo</label>
+      <input id="newUserName" placeholder="Ex: João da Silva" required>
+      
+      <label>E-mail Corporativo</label>
+      <input id="newUserEmail" type="email" placeholder="joao@fghsaude.org.br" required>
+      
+      <label>Senha Provisória</label>
+      <input id="newUserPass" type="text" value="PASF@2026" required>
+      <small style="color:var(--gray-500);font-size:11px;display:block;margin-top:4px">O usuário poderá alterar depois.</small>
+
+      <label>Perfil de Acesso</label>
+      <select id="newUserRole" onchange="toggleCompanyField(this.value)">
+        <option value="unique_user">Usuário (Empresa)</option>
+        <option value="unique_collaborator">Gestor (Empresa)</option>
+        <option value="unique_viewer">Viewer (Empresa)</option>
+        <option value="global_collaborator">Colaborador Global</option>
+        <option value="global_viewer">Viewer Global</option>
+        <option value="admin">Administrador</option>
+      </select>
+
+      <label id="lblCompany">Empresa Vinculada</label>
+      <select id="newUserCompany">
+        ${state.companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+      </select>
+
+      <label>Gestor Imediato (Notificações)</label>
+      <select id="newUserManager">
+        <option value="">Nenhum (Topo da Hierarquia)</option>
+        ${managers.map(m => `<option value="${m.id}">${m.name} (${ROLE_LABELS[m.role]})</option>`).join('')}
+      </select>
+
+      <div id="newUserError" class="login-error hidden" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+      <button class="btn btn-primary" id="btnCreateUser" onclick="submitNewUser(this)">Criar Usuário</button>
+    </div>`);
+}
+
+// Esconde o campo de empresa se o perfil for global/admin
+function toggleCompanyField(role){
+  const isGlobal = role.startsWith('global_') || role === 'admin';
+  const lbl = $('lblCompany');
+  const sel = $('newUserCompany');
+  if(isGlobal){
+    lbl.style.opacity = '0.5';
+    sel.style.opacity = '0.5';
+    sel.disabled = true;
+    sel.value = '';
+  } else {
+    lbl.style.opacity = '1';
+    sel.style.opacity = '1';
+    sel.disabled = false;
+  }
+}
+
+async function submitNewUser(btn){
+  const name = $('newUserName').value.trim();
+  const email = $('newUserEmail').value.trim().toLowerCase();
+  const pass = $('newUserPass').value;
+  const role = $('newUserRole').value;
+  const company_id = $('newUserCompany').disabled ? null : $('newUserCompany').value;
+  const manager_id = $('newUserManager').value || null;
+  const errDiv = $('newUserError');
+
+  if(!name || !email || !pass) {
+    errDiv.textContent = 'Preencha nome, e-mail e senha.';
+    errDiv.classList.remove('hidden');
+    return;
+  }
+
+  btn.textContent = 'Criando...';
+  btn.disabled = true;
+  errDiv.classList.add('hidden');
+
+  // Cria uma instância secundária do Supabase APENAS para cadastrar o usuário
+  // Isso impede que a sessão do Admin logado seja substituída pela do novo usuário.
+  const tempSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  
+  // Faz o signUp com os metadados (o trigger lá no banco vai ler e preencher a tabela profiles)
+  const { data, error } = await tempSupabase.auth.signUp({
+    email: email,
+    password: pass,
+    options: {
+      data: {
+        name: name,
+        role: role,
+        company_id: company_id,
+        manager_id: manager_id
+      }
+    }
+  });
+
+  if (error) {
+    errDiv.textContent = error.message;
+    errDiv.classList.remove('hidden');
+    btn.textContent = 'Criar Usuário';
+    btn.disabled = false;
+    return;
+  }
+
+  // Se deu certo, fecha o modal e recarrega a lista de usuários
+  btn.closest('.modal-overlay').remove();
+  alert(`Usuário ${name} criado com sucesso!\nSenha provisória: ${pass}`);
+  
+  // Puxa a lista atualizada de perfis do banco
+  await refreshUsersList();
+}
+
+async function refreshUsersList(){
+  const { data: profiles } = await window.db.from('profiles').select('*');
+  state.users = (profiles || []).map(p => ({
+    ...p,
+    companyId: p.company_id,
+    gestorId: p.manager_id
+  }));
+  renderUsers();
 }
