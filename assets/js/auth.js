@@ -1,68 +1,92 @@
-/* Login/logout e sessão (index.html + app.html) */
+/* assets/js/auth.js */
 
-function handleLogin(e){
+async function handleLogin(e){
   e.preventDefault();
   const email = $('loginEmail').value.trim().toLowerCase();
   const pass = $('loginPass').value;
-  const u = state.users.find(x => x.email.toLowerCase() === email && x.password === pass);
-  if(!u){
-    const err = $('loginError');
+  const err = $('loginError');
+  const btn = e.target.querySelector('button[type="submit"]');
+  
+  btn.textContent = 'Entrando...';
+  btn.disabled = true;
+  err.classList.add('hidden');
+
+  // 1. Autentica no Supabase Auth
+  const { data: authData, error: authError } = await window.db.auth.signInWithPassword({ email, password: pass });
+
+  if (authError) {
     err.textContent = 'E-mail ou senha inválidos.';
     err.classList.remove('hidden');
+    btn.textContent = 'Entrar';
+    btn.disabled = false;
     return;
   }
-  sessionStorage.setItem(SESSION_KEY, u.id);
+
+  // 2. Busca o perfil na tabela profiles
+  const { data: profile, error: profileError } = await window.db
+    .from('profiles')
+    .select('*')
+    .eq('id', authData.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    err.textContent = 'Erro ao carregar perfil do usuário.';
+    err.classList.remove('hidden');
+    await window.db.auth.signOut();
+    btn.textContent = 'Entrar';
+    btn.disabled = false;
+    return;
+  }
+
+  // 3. Salva na sessão e redireciona
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(profile));
   window.location.href = 'app.html';
 }
 
-function logout(){
+async function logout(){
+  await window.db.auth.signOut();
   sessionStorage.removeItem(SESSION_KEY);
   window.location.href = 'index.html';
 }
 
 function currentSessionUser(){
-  const id = sessionStorage.getItem(SESSION_KEY);
-  return id ? state.users.find(u => u.id === id) : null;
+  const data = sessionStorage.getItem(SESSION_KEY);
+  return data ? JSON.parse(data) : null;
 }
 
-function requireAuth(){
-  const u = currentSessionUser();
-  if(!u){ window.location.href = 'index.html'; return null; }
-  return u;
+async function requireAuth(){
+  const sessionUser = currentSessionUser();
+  if(!sessionUser){ 
+    window.location.href = 'index.html'; 
+    return null; 
+  }
+  
+  // Valida se a sessão do Supabase ainda está ativa
+  const { data: { session } } = await window.db.auth.getSession();
+  if (!session) {
+    sessionStorage.removeItem(SESSION_KEY);
+    window.location.href = 'index.html';
+    return null;
+  }
+  
+  return sessionUser;
 }
 
-/* Boot específico de index.html */
 function bootLoginPage(){
   if(currentSessionUser()){
     window.location.href = 'app.html';
     return;
   }
   $('loginForm').addEventListener('submit', handleLogin);
-
+  
+  // O botão de reset demo agora apenas limpa o cache
   const demoGrid = $('demoGrid');
-  if(demoGrid){
-    const order = ['u1','u2','u3','u4','u5','u6'];
-    demoGrid.innerHTML = order.map(id => {
-      const u = state.users.find(x => x.id === id);
-      if(!u) return '';
-      const comp = u.companyId ? companyById(u.companyId)?.name : 'Todas';
-      return `<button type="button" class="demo-btn" onclick="quickLogin('${u.id}')">
-        <div class="avatar" style="background:${ROLE_COLORS[u.role]}">${initials(u.name)}</div>
-        <div class="info">
-          <strong>${u.name}</strong>
-          <small>${ROLE_SHORT[u.role]} · ${comp}</small>
-        </div>
-      </button>`;
-    }).join('');
+  if(demoGrid) {
+    demoGrid.innerHTML = `<p style="font-size:11px;color:var(--gray-500);text-align:center;grid-column:1/-1">
+      Para testar, crie usuários no painel do Supabase (Authentication > Users)<br>
+      e vincule-os na tabela 'profiles'.
+    </p>`;
   }
 }
 
-function quickLogin(userId){
-  const u = state.users.find(x => x.id === userId);
-  if(!u) return;
-  sessionStorage.setItem(SESSION_KEY, u.id);
-  window.location.href = 'app.html';
-}
-
-/* index.html é a única página que chama bootLoginPage diretamente */
 if(document.getElementById('loginForm')) bootLoginPage();
