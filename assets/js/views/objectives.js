@@ -91,7 +91,7 @@ function objectiveHTML(o, idx, compId){
         ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
       </div>
       <div class="tasks-header">
-        <h4>Como? <span class="count">${allTasks.length}</span></h4>
+        <h4>Tarefas <span class="count">${allTasks.length}</span></h4>
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
       </div>
       <div>${allTasks.map(t => taskHTML(t, compId, o.id)).join('') || '<p style="color:var(--gray-500);font-size:12px;padding:8px 0">Nenhuma tarefa cadastrada.</p>'}</div>
