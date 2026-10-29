@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PASF — Plano de Ação</title>
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/views.css">
+</head>
+<body>
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-mark">P</div>
+        <div>
+          <h2>PASF</h2>
+          <span>Sustentabilidade Financeira</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" id="sidebarNav"></nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="avatar" id="sideAvatar">?</div>
+          <div>
+            <strong id="sideName">—</strong>
+            <small id="sideRole">—</small>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">↩ Sair</button>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="company-selector">
+          <span class="dot"></span>
+          <select id="companySelect"></select>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" id="bellBtn" title="Notificações" onclick="toggleNotifications(event)">
+            ◔<span class="badge hidden" id="bellBadge">0</span>
+          </button>
+          <div class="topbar-user">
+            <div class="avatar" id="topAvatar">?</div>
+            <div>
+              <div class="name" id="topName">— <span class="role-badge" id="topRole">—</span></div>
+              <div class="role" id="topCompany">—</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section id="view-dashboard"     class="view hidden"></section>
+        <section id="view-objetivos"     class="view hidden"></section>
+        <section id="view-minhas"        class="view hidden"></section>
+        <section id="view-responsaveis"  class="view hidden"></section>
+        <section id="view-empresas"      class="view hidden"></section>
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/state.js"></script>
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/permissions.js"></script>
+  <script src="assets/js/services/users.js"></script>
+  <script src="assets/js/services/audit.js"></script>
+  <script src="assets/js/services/tasks.js"></script>
+  <script src="assets/js/services/objectives.js"></script>
+  <script src="assets/js/components/modal.js"></script>
+  <script src="assets/js/components/task-card.js"></script>
+  <script src="assets/js/views/dashboard.js"></script>
+  <script src="assets/js/views/objectives.js"></script>
+  <script src="assets/js/views/my-tasks.js"></script>
+  <script src="assets/js/views/users.js"></script>
+  <script src="assets/js/views/companies.js"></script>
+  <script src="assets/js/notifications.js"></script>
+  <script src="assets/js/router.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

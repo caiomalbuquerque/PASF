@@ -1,0 +1,38 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#0f4c81;--primary-light:#1a6ab0;--primary-dark:#0a3459;
+  --accent:#10b981;--accent-dark:#059669;--danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+  --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;--gray-400:#9ca3af;
+  --gray-500:#6b7280;--gray-600:#4b5563;--gray-700:#374151;--gray-800:#1f2937;--gray-900:#111827;
+  --sidebar-bg:#0f172a;--sidebar-hover:#1e293b;--white:#fff;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 15px rgba(0,0,0,.1),0 4px 6px rgba(0,0,0,.05);
+  --radius:8px;--radius-lg:12px;--transition:all .18s ease;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+body{font-family:var(--font);background:var(--gray-100);color:var(--gray-800);font-size:14px;line-height:1.5;min-height:100vh}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:13px}
+input:disabled,select:disabled,textarea:disabled{opacity:.7;cursor:not-allowed;background:var(--gray-100)!important}
+a{text-decoration:none;color:inherit}
+
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--primary-light));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0}
+.avatar.lg{width:38px;height:38px;font-size:13px}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--radius);
+  font-size:13px;font-weight:600;transition:var(--transition);white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 6px rgba(15,76,129,.3)}
+.btn-primary:hover:not(:disabled){background:var(--primary-light)}
+.btn-ghost{background:var(--gray-100);color:var(--gray-700);border:1px solid var(--gray-200)}
+.btn-ghost:hover:not(:disabled){background:var(--gray-200)}
+.btn-sm{padding:6px 11px;font-size:12px}
+.btn-danger{background:#fee2e2;color:var(--danger)}
+.btn-danger:hover:not(:disabled){background:#fecaca}
+
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+.role-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:4px}
