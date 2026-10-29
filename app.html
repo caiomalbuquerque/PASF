@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="assets/css/components.css">
   <link rel="stylesheet" href="assets/css/views.css">
   <!-- Supabase SDK --> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase-client.js"></script>
 </head>
 <body>
   <div id="app" class="app hidden">
@@ -64,8 +63,7 @@
     </div>
   </div>
 
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/state.js"></script>
+ <script src="assets/js/config.js"></script>
   <script src="assets/js/utils.js"></script>
   <script src="assets/js/permissions.js"></script>
   <script src="assets/js/services/users.js"></script>
@@ -81,6 +79,9 @@
   <script src="assets/js/views/companies.js"></script>
   <script src="assets/js/notifications.js"></script>
   <script src="assets/js/router.js"></script>
+  
+  <!-- O Main agora é assíncrono e vai montar a tela após buscar dados -->
+  <script src="assets/js/supabase-client.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/main.js"></script>
 </body>
