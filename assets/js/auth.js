@@ -29,8 +29,16 @@ async function handleLogin(e){
     .eq('id', authData.user.id)
     .single();
 
+  // 2. Busca o perfil na tabela profiles
+  const { data: profile, error: profileError } = await window.db
+    .from('profiles')
+    .select('*')
+    .eq('id', authData.user.id)
+    .single();
+
   if (profileError || !profile) {
-    err.textContent = 'Erro ao carregar perfil do usuário.';
+    console.error("Erro detalhado do Supabase:", profileError);
+    err.textContent = `Erro: ${profileError?.message || 'Perfil não encontrado na tabela'}`;
     err.classList.remove('hidden');
     await window.db.auth.signOut();
     btn.textContent = 'Entrar';
