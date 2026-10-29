@@ -12,10 +12,16 @@ function taskHTML(t, compId, objId){
   const descText = t.description || '(Nova tarefa sem descrição)';
 
   return `
-  <div class="task-card ${isOpen ? 'open' : ''}" id="task-${t.id}" data-task-id="${t.id}">
+  <div class="task-card ${isOpen ? 'open' : ''}" id="task-${t.id}" data-task-id="${t.id}"
+       draggable="true" 
+       ondragstart="handleDragStart(event, '${t.id}')" 
+       ondragend="handleDragEnd(event)"
+       ondragover="handleDragOver(event)"
+       ondrop="handleDrop(event, '${t.id}', '${objId}', '${compId}')">
     
     <!-- Cabeçalho (Sempre visível) -->
     <div class="task-header" onclick="toggleTask('${t.id}')">
+      <span class="drag-handle" onclick="event.stopPropagation()" title="Arrastar para reordenar">⋮⋮</span>
       <span class="chevron">▶</span>
       <div class="task-summary">
         <span class="desc">${escapeHtml(descText)}</span>
@@ -27,7 +33,7 @@ function taskHTML(t, compId, objId){
       </div>
     </div>
 
-    <!-- Corpo da Tarefa (Visual original) -->
+    <!-- Corpo da Tarefa -->
     <div class="task-body">
       <div class="task-top">
         <input class="task-desc" value="${escapeHtml(t.description)}" placeholder="O que precisa ser feito?"
