@@ -40,19 +40,24 @@
       ...n, userId: n.user_id, taskId: n.task_id, read: n.is_read, createdAt: n.created_at
     }));
     
+    // Agrupa objetivos e tarefas
     state.objectives = {};
     state.companies.forEach(c => { state.objectives[c.id] = []; });
     
     (objectives || []).forEach(obj => {
       if (!state.objectives[obj.company_id]) state.objectives[obj.company_id] = [];
       
-      const objTasks = (tasks || []).filter(t => t.objective_id === obj.id).map(t => ({
-        ...t, 
-        responsibleId: t.responsible_id, 
-        startDate: t.start_date, 
-        endDate: t.end_date,
-        attachments: []
-      }));
+      // ORDENAÇÃO AQUI: Pega as tarefas, ordena pelo sort_order e depois por data
+      const objTasks = (tasks || [])
+        .filter(t => t.objective_id === obj.id)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.created_at) - new Date(b.created_at))
+        .map(t => ({
+          ...t, 
+          responsibleId: t.responsible_id, 
+          startDate: t.start_date, 
+          endDate: t.end_date,
+          attachments: []
+        }));
       
       state.objectives[obj.company_id].push({
         ...obj, monthlySavings: obj.monthly_savings, tasks: objTasks
@@ -81,6 +86,7 @@
   }
 })();
 
+/* Realtime - Notificações */
 function initRealtime(){
   window.db.channel('custom-all-channel')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${state.currentUser.id}` }, payload => {
