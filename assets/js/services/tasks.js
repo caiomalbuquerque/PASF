@@ -93,7 +93,7 @@ async function removeTask(compId, objId, taskId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(o) o.tasks = o.tasks.filter(t => t.id !== taskId);
   renderObjectives();
-} // <--- ESTA CHAVE ESTAVA FALTANDO
+}
 
 async function addAttachments(compId, taskId, input){
   const found = findTask(taskId);
