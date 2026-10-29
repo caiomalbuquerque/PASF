@@ -1,3 +1,5 @@
+/* assets/js/components/task-card.js */
+
 function taskHTML(t, compId, objId){
   const users = usersOfCompany(compId);
   const edit = can('editTask');
@@ -5,77 +7,110 @@ function taskHTML(t, compId, objId){
   const descEdit = can('editObj') || can('addTask');
   const eff = effectiveStatus(t);
   const autoLate = eff === 'Atrasada' && t.status !== 'Atrasada';
+  
+  const isOpen = state._openTasks && state._openTasks.includes(t.id);
+  const respName = userById(t.responsibleId)?.name || 'Sem responsável';
+  const descText = t.description || '(Nova tarefa sem descrição)';
 
   return `
-  <div class="task-card" data-task-id="${t.id}">
-    <div class="task-top">
-      <input class="task-desc" value="${escapeHtml(t.description)}" placeholder="Descrição da tarefa (Como?)"
-             ${descEdit && edit ? '' : 'disabled'}
-             onchange="updateTask('${compId}','${t.id}','description',this.value)">
-      <div class="task-actions">
+  <div class="task-card ${isOpen ? 'open' : ''}" id="task-${t.id}" data-task-id="${t.id}">
+    
+    <!-- Cabeçalho da Tarefa (Sempre visível) -->
+    <div class="task-header" onclick="toggleTask('${t.id}')">
+      <span class="chevron">▶</span>
+      <div class="task-summary">
+        <span class="desc">${escapeHtml(descText)}</span>
+        <span class="tag" style="background:${autoLate?'#fee2e2':'var(--gray-100)'};color:${autoLate?'#991b1b':'var(--gray-600)'}">${eff}</span>
+        <span style="font-size:11px;color:var(--gray-400);font-weight:normal">👤 ${escapeHtml(respName)}</span>
+      </div>
+      <div class="task-actions" onclick="event.stopPropagation()">
         <button title="Histórico" onclick="openHistory('${t.id}')">◔</button>
         ${del ? `<button class="danger" title="Remover" onclick="removeTask('${compId}','${objId}','${t.id}')">✕</button>` : ''}
       </div>
     </div>
-    <div class="task-grid">
-      <div class="task-field">
-        <label>Responsável</label>
-        <select ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','responsibleId',this.value)">
-          ${users.map(u => `<option value="${u.id}" ${u.id===t.responsibleId?'selected':''}>${u.name}</option>`).join('')}
-        </select>
+
+    <!-- Corpo da Tarefa (Oculto por padrão) -->
+    <div class="task-body">
+      <div class="task-top">
+        <input class="task-desc" value="${escapeHtml(t.description)}" placeholder="O que precisa ser feito?"
+               ${descEdit && edit ? '' : 'disabled'}
+               onchange="updateTask('${compId}','${t.id}','description',this.value)">
       </div>
-      <div class="task-field">
-        <label>Início</label>
-        <input type="date" value="${t.startDate||''}" ${edit?'':'disabled'}
-               onchange="updateTask('${compId}','${t.id}','startDate',this.value)">
+      <div class="task-grid">
+        <div class="task-field">
+          <label>Responsável</label>
+          <select ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','responsibleId',this.value)">
+            ${users.map(u => `<option value="${u.id}" ${u.id===t.responsibleId?'selected':''}>${u.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="task-field">
+          <label>Início</label>
+          <input type="date" value="${t.startDate||''}" ${edit?'':'disabled'}
+                 onchange="updateTask('${compId}','${t.id}','startDate',this.value)">
+        </div>
+        <div class="task-field">
+          <label>Conclusão</label>
+          <input type="date" value="${t.endDate||''}" ${edit?'':'disabled'}
+                 onchange="updateTask('${compId}','${t.id}','endDate',this.value)">
+        </div>
+        <div class="task-field">
+          <label>Status</label>
+          <select class="status-select" data-status="${t.status}" ${edit?'':'disabled'}
+                  onchange="updateTask('${compId}','${t.id}','status',this.value); this.dataset.status=this.value;">
+            ${STATUS_OPTIONS.map(s => `<option ${s===t.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="task-field">
+          <label>Custo (R$)</label>
+          <input type="number" step="0.01" min="0" value="${t.cost||''}" placeholder="0,00" ${edit?'':'disabled'}
+                 onchange="updateTask('${compId}','${t.id}','cost',this.value)">
+        </div>
+        <div class="task-field">
+          <label>Resultado (R$)</label>
+          <input type="number" step="0.01" min="0" value="${t.result||''}" placeholder="0,00" ${edit?'':'disabled'}
+                 onchange="updateTask('${compId}','${t.id}','result',this.value)">
+        </div>
+        <div class="task-field full">
+          <label>Observações</label>
+          <textarea placeholder="Anotações..." ${edit?'':'disabled'}
+                    onchange="updateTask('${compId}','${t.id}','notes',this.value)">${escapeHtml(t.notes||'')}</textarea>
+        </div>
       </div>
-      <div class="task-field">
-        <label>Conclusão</label>
-        <input type="date" value="${t.endDate||''}" ${edit?'':'disabled'}
-               onchange="updateTask('${compId}','${t.id}','endDate',this.value)">
-      </div>
-      <div class="task-field">
-        <label>Status ${autoLate ? `<span class="late-badge">⚠ Atrasada</span>` : ''}</label>
-        <select class="status-select" data-status="${t.status}" ${edit?'':'disabled'}
-                onchange="updateTask('${compId}','${t.id}','status',this.value); this.dataset.status=this.value;">
-          ${STATUS_OPTIONS.map(s => `<option ${s===t.status?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="task-field">
-        <label>Custo (R$)</label>
-        <input type="number" step="0.01" min="0" value="${t.cost||''}" placeholder="0,00" ${edit?'':'disabled'}
-               onchange="updateTask('${compId}','${t.id}','cost',this.value)">
-      </div>
-      <div class="task-field">
-        <label>Resultado (R$)</label>
-        <input type="number" step="0.01" min="0" value="${t.result||''}" placeholder="0,00" ${edit?'':'disabled'}
-               onchange="updateTask('${compId}','${t.id}','result',this.value)">
-      </div>
-      <div class="task-field full">
-        <label>Observações</label>
-        <textarea placeholder="Anotações..." ${edit?'':'disabled'}
-                  onchange="updateTask('${compId}','${t.id}','notes',this.value)">${escapeHtml(t.notes||'')}</textarea>
-      </div>
-    </div>
-    <div class="attachments">
-      <div class="attach-row">
-        <span class="attach-label">📎 Anexos:</span>
-        ${(t.attachments||[]).map(a =>
-          `<span class="attach-item">📄 ${escapeHtml(a.name)}
-            ${edit ? `<button onclick="removeAttachment('${compId}','${t.id}','${a.id}')">×</button>` : ''}
-          </span>`).join('')}
-        ${(t.attachments||[]).length === 0 ? '<span style="font-size:11px;color:var(--gray-400)">nenhum</span>' : ''}
-        ${edit ? `
-          <label class="btn btn-sm btn-ghost" style="margin-left:auto;padding:4px 10px;font-size:11px;cursor:pointer">
-            + Anexar arquivo
-            <input type="file" style="display:none" multiple onchange="addAttachments('${compId}','${t.id}', this)">
-          </label>` : ''}
+      <div class="attachments">
+        <div class="attach-row">
+          <span class="attach-label">📎 Anexos:</span>
+          ${(t.attachments||[]).map(a =>
+            `<span class="attach-item">📄 ${escapeHtml(a.name)}
+              ${edit ? `<button onclick="removeAttachment('${compId}','${t.id}','${a.id}')">×</button>` : ''}
+            </span>`).join('')}
+          ${(t.attachments||[]).length === 0 ? '<span style="font-size:11px;color:var(--gray-400)">nenhum</span>' : ''}
+          ${edit ? `
+            <label class="btn btn-sm btn-ghost" style="margin-left:auto;padding:4px 10px;font-size:11px;cursor:pointer">
+              + Anexar arquivo
+              <input type="file" style="display:none" multiple onchange="addAttachments('${compId}','${t.id}', this)">
+            </label>` : ''}
+        </div>
       </div>
     </div>
   </div>`;
 }
 
+function toggleTask(id) {
+  const el = $(`task-${id}`);
+  if (!el) return;
+  
+  if (el.classList.contains('open')) {
+    el.classList.remove('open');
+    if (state._openTasks) state._openTasks = state._openTasks.filter(x => x !== id);
+  } else {
+    el.classList.add('open');
+    if (!state._openTasks) state._openTasks = [];
+    if (!state._openTasks.includes(id)) state._openTasks.push(id);
+  }
+}
+
 function openHistory(taskId){
+  // ... mantém o código igual ao anterior ...
   const entries = historyFor(taskId);
   const found = findTask(taskId);
   const title = found ? (found.task.description || '(sem descrição)') : 'Tarefa';
