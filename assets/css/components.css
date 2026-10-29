@@ -184,4 +184,22 @@ select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;b
 .history-item .body{color:var(--gray-700)}
 .history-item .field{font-weight:600;color:var(--gray-800)}
 .history-item .old{color:var(--danger);text-decoration:line-through;margin:0 4px}
+
+/* Drag and Drop de Tarefas */
+.drag-handle {
+  cursor: grab;
+  color: var(--gray-400);
+  font-size: 14px;
+  padding: 0 4px;
+  font-weight: bold;
+  user-select: none;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+.task-card.dragging {
+  opacity: 0.4;
+  border: 2px dashed var(--primary);
+  background: var(--gray-50);
+}
 .history-item .new{color:var(--accent-dark);font-weight:600;margin:0 4px}
