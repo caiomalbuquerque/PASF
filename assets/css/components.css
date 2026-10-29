@@ -104,7 +104,7 @@
 .admin-table tr:last-child td{border-bottom:none}
 .admin-table tr:hover td{background:var(--gray-50)}
 
-/* Company grid */
+/* Company grid */ 
 .company-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
 .company-card{background:#fff;border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow);
   border:1px solid var(--gray-100);border-left:4px solid var(--primary)}
