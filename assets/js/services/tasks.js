@@ -127,11 +127,15 @@ async function addTask(compId, objId){
   
   const firstUser = state.users.find(u => u.companyId === Number(compId));
   
+  // Calcula qual será a próxima posição (último lugar)
+  const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
+  
   const newTask = {
     objective_id: objId,
     description: '',
     responsible_id: firstUser?.id || null,
-    status: 'A Iniciar'
+    status: 'A Iniciar',
+    sort_order: maxOrder + 1
   };
 
   const { data, error } = await window.db.from('tasks').insert([newTask]).select().single();
@@ -142,7 +146,7 @@ async function addTask(compId, objId){
   if(!state._openObjectives) state._openObjectives = [];
   if(!state._openObjectives.includes(objId)) state._openObjectives.push(objId);
   
-  renderObjectives(); // Aqui recarrega tudo pois adiciona um card novo na lista
+  renderObjectives(); 
 }
 
 async function removeTask(compId, objId, taskId){
