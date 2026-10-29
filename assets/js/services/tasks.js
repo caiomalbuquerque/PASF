@@ -94,6 +94,15 @@ async function updateTask(compId, taskId, field, value){
     }]);
   }
 
+  // Atualiza o nome da tarefa na capa (quando fechada)
+  if (field === 'description') {
+    const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (taskCard) {
+      const headerDesc = taskCard.querySelector('.task-header .desc');
+      if (headerDesc) headerDesc.textContent = value || '(Nova tarefa sem descrição)';
+    }
+  }
+
   // Substitui renderObjectives() por atualização cirúrgica
   refreshObjectiveDOM(found.objective.id, compId);
   
