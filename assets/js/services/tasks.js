@@ -27,19 +27,15 @@ async function updateTask(compId, taskId, field, value){
   const oldValue = found.task[field];
   if(String(oldValue||'') === String(value||'')) return;
   
-  // Mapeia camelCase do frontend para snake_case do banco
   const dbField = field === 'responsibleId' ? 'responsible_id' : 
                   field === 'startDate' ? 'start_date' : 
                   field === 'endDate' ? 'end_date' : field;
 
-  // 1. Atualiza no banco
   const { error } = await window.db.from('tasks').update({ [dbField]: value || null }).eq('id', taskId);
   if (error) { alert("Erro ao salvar: " + error.message); return; }
 
-  // 2. Atualiza no state local
   found.task[field] = value;
   
-  // 3. Registra auditoria (se não for campo de controle)
   if (field !== 'created_at' && field !== 'updated_at') {
     await window.db.from('audit_logs').insert([{
       task_id: taskId,
@@ -50,10 +46,9 @@ async function updateTask(compId, taskId, field, value){
     }]);
   }
 
-  // 4. Notificações (gestor e responsável)
-  if(state.currentUser.manager_id && state.currentUser.manager_id !== state.currentUser.id){
+  if(state.currentUser.gestorId && state.currentUser.gestorId !== state.currentUser.id){
     await window.db.from('notifications').insert([{
-      user_id: state.currentUser.manager_id,
+      user_id: state.currentUser.gestorId,
       message: `${state.currentUser.name} atualizou "${FIELD_LABELS[field]||field}" da tarefa "${found.task.description || '(sem descrição)'}"`,
       task_id: taskId
     }]);
@@ -73,7 +68,7 @@ async function addTask(compId, objId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(!o) return;
   
-  const firstUser = state.users.find(u => u.company_id === Number(compId));
+  const firstUser = state.users.find(u => u.companyId === Number(compId));
   
   const newTask = {
     objective_id: objId,
@@ -98,8 +93,7 @@ async function removeTask(compId, objId, taskId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(o) o.tasks = o.tasks.filter(t => t.id !== taskId);
   renderObjectives();
-
-  /* Substitua addAttachments e removeAttachment em services/tasks.js */
+} // <--- ESTA CHAVE ESTAVA FALTANDO
 
 async function addAttachments(compId, taskId, input){
   const found = findTask(taskId);
@@ -110,14 +104,12 @@ async function addAttachments(compId, taskId, input){
     const fileExt = file.name.split('.').pop();
     const fileName = `${taskId}/${uid()}.${fileExt}`;
     
-    // 1. Upload para o Storage
     const { error: uploadError } = await window.db.storage
       .from('task-attachments')
       .upload(fileName, file);
 
     if (uploadError) { alert("Erro no upload: " + uploadError.message); continue; }
 
-    // 2. Salva os metadados na tabela
     const { data, error } = await window.db.from('task_attachments').insert([{
       task_id: taskId,
       file_name: file.name,
@@ -140,14 +132,11 @@ async function removeAttachment(compId, taskId, attachId){
   
   const attach = found.task.attachments.find(a => a.id === attachId);
   
-  // 1. Remove do Storage
   if(attach?.path) {
     await window.db.storage.from('task-attachments').remove([attach.path]);
   }
-  // 2. Remove do Banco
   await window.db.from('task_attachments').delete().eq('id', attachId);
   
   found.task.attachments = found.task.attachments.filter(a => a.id !== attachId);
   renderObjectives();
-}
 }
