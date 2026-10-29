@@ -182,11 +182,28 @@ async function submitEditUser(userId, btn) {
 
   btn.textContent = 'Salvando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  const { error } = await window.db.from('profiles').update({
-    name, role, company_id, manager_id
-  }).eq('id', userId);
+  // Adicionamos o .select().single() no final para ver se o banco realmente atualizou a linha
+  const { data, error } = await window.db.from('profiles').update({
+    name: name, 
+    role: role, 
+    company_id: company_id ? Number(company_id) : null, 
+    manager_id: manager_id
+  }).eq('id', userId).select().single();
 
-  if (error) { errDiv.textContent = error.message; errDiv.classList.remove('hidden'); btn.textContent = 'Salvar'; btn.disabled = false; return; }
+  if (error) { 
+    errDiv.textContent = "Erro no banco: " + error.message; 
+    errDiv.classList.remove('hidden'); 
+    btn.textContent = 'Salvar'; btn.disabled = false; 
+    return; 
+  }
+
+  if (!data) {
+    // Se data for nulo, o RLS bloqueou a alteração silenciosamente
+    errDiv.textContent = "A alteração não foi permitida pelo banco (RLS).";
+    errDiv.classList.remove('hidden');
+    btn.textContent = 'Salvar'; btn.disabled = false;
+    return;
+  }
 
   btn.closest('.modal-overlay').remove();
   alert('Usuário atualizado com sucesso!');
