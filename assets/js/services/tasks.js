@@ -20,6 +20,39 @@ function findTask(taskId){
   return null;
 }
 
+// Atualiza apenas os totais na tela sem recarregar o HTML inteiro (evita a piscada)
+function refreshObjectiveDOM(objId, compId) {
+  const o = (state.objectives[compId] || []).find(x => x.id === objId);
+  if (!o) return;
+
+  const allTasks = o.tasks;
+  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
+  const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
+  const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
+  const totalResult = allTasks.reduce((s,t) => s + (+t.result||0), 0);
+  const net = totalResult - totalCost;
+
+  // Atualiza a meta (tarefas, concluídas, atrasadas)
+  const metaEl = $(`meta-${objId}`);
+  if (metaEl) {
+    metaEl.innerHTML = `
+      <span>${allTasks.length} tarefa${allTasks.length!==1?'s':''}</span>
+      <span>${done} concluída${done!==1?'s':''}</span>
+      ${late ? `<span style="color:#991b1b;font-weight:600">${late} em atraso</span>` : ''}
+    `;
+  }
+
+  // Atualiza os totais de custo e resultado
+  const totalsEl = $(`totals-${objId}`);
+  if (totalsEl) {
+    totalsEl.innerHTML = `
+      <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
+      <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(totalResult)}</span></div>
+      <div class="t"><span class="label">Saldo</span><span class="value ${net>=0?'pos':'neg'}">${fmtBRL(net)}</span></div>
+    `;
+  }
+}
+
 async function updateTask(compId, taskId, field, value){
   const found = findTask(taskId);
   if(!found) return;
@@ -61,7 +94,22 @@ async function updateTask(compId, taskId, field, value){
     }]);
   }
 
-  renderObjectives();
+  // Substitui renderObjectives() por atualização cirúrgica
+  refreshObjectiveDOM(found.objective.id, compId);
+  
+  // Atualiza o badge de status se for a data ou status
+  if (field === 'status' || field === 'endDate') {
+      // Encontra o card da tarefa específico e atualiza o label "Atrasada"
+      const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+      if (taskCard) {
+          const statusLabel = taskCard.querySelector('.task-field:nth-child(4) label');
+          if (statusLabel) {
+              const eff = effectiveStatus(found.task);
+              const autoLate = eff === 'Atrasada' && found.task.status !== 'Atrasada';
+              statusLabel.innerHTML = `Status ${autoLate ? '<span class="late-badge">⚠ Atrasada</span>' : ''}`;
+          }
+      }
+  }
 }
 
 async function addTask(compId, objId){
@@ -82,11 +130,10 @@ async function addTask(compId, objId){
   
   o.tasks.push({ ...data, responsibleId: data.responsible_id, startDate: data.start_date, endDate: data.end_date });
   
-  // Em vez de forçar a classe manualmente, adiciona à lista de abertos e manda renderizar
   if(!state._openObjectives) state._openObjectives = [];
   if(!state._openObjectives.includes(objId)) state._openObjectives.push(objId);
   
-  renderObjectives();
+  renderObjectives(); // Aqui recarrega tudo pois adiciona um card novo na lista
 }
 
 async function removeTask(compId, objId, taskId){
@@ -96,6 +143,7 @@ async function removeTask(compId, objId, taskId){
   
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(o) o.tasks = o.tasks.filter(t => t.id !== taskId);
+  
   renderObjectives();
 }
 
