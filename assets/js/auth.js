@@ -29,13 +29,6 @@ async function handleLogin(e){
     .eq('id', authData.user.id)
     .single();
 
-  // 2. Busca o perfil na tabela profiles
-  const { data: profile, error: profileError } = await window.db
-    .from('profiles')
-    .select('*')
-    .eq('id', authData.user.id)
-    .single();
-
   if (profileError || !profile) {
     console.error("Erro detalhado do Supabase:", profileError);
     err.textContent = `Erro: ${profileError?.message || 'Perfil não encontrado na tabela'}`;
@@ -46,8 +39,15 @@ async function handleLogin(e){
     return;
   }
 
-  // 3. Salva na sessão e redireciona
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(profile));
+  // 3. Mapeia os dados do banco (snake_case) para o frontend (camelCase)
+  const formattedProfile = {
+    ...profile,
+    companyId: profile.company_id,
+    gestorId: profile.manager_id
+  };
+
+  // 4. Salva na sessão e redireciona
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(formattedProfile));
   window.location.href = 'app.html';
 }
 
@@ -69,7 +69,6 @@ async function requireAuth(){
     return null; 
   }
   
-  // Valida se a sessão do Supabase ainda está ativa
   const { data: { session } } = await window.db.auth.getSession();
   if (!session) {
     sessionStorage.removeItem(SESSION_KEY);
@@ -87,7 +86,6 @@ function bootLoginPage(){
   }
   $('loginForm').addEventListener('submit', handleLogin);
   
-  // O botão de reset demo agora apenas limpa o cache
   const demoGrid = $('demoGrid');
   if(demoGrid) {
     demoGrid.innerHTML = `<p style="font-size:11px;color:var(--gray-500);text-align:center;grid-column:1/-1">
