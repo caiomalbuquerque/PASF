@@ -81,8 +81,12 @@ async function addTask(compId, objId){
   if (error) { alert("Erro: " + error.message); return; }
   
   o.tasks.push({ ...data, responsibleId: data.responsible_id, startDate: data.start_date, endDate: data.end_date });
+  
+  // Em vez de forçar a classe manualmente, adiciona à lista de abertos e manda renderizar
+  if(!state._openObjectives) state._openObjectives = [];
+  if(!state._openObjectives.includes(objId)) state._openObjectives.push(objId);
+  
   renderObjectives();
-  $(`obj-${objId}`)?.classList.add('open');
 }
 
 async function removeTask(compId, objId, taskId){
