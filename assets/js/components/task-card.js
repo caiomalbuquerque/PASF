@@ -44,41 +44,35 @@ function taskHTML(t, compId, objId){
       <div class="task-grid">
         <div class="task-field">
           <label>Responsável</label>
-          <select ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','responsibleId',this.value)">
+          <select data-field="responsibleId" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','responsibleId',this.value)">
             ${users.map(u => `<option value="${u.id}" ${u.id===t.responsibleId?'selected':''}>${u.name}</option>`).join('')}
           </select>
         </div>
         <div class="task-field">
           <label>Início</label>
-          <input type="date" value="${t.startDate||''}" ${edit?'':'disabled'}
-                 onchange="updateTask('${compId}','${t.id}','startDate',this.value)">
+          <input type="date" data-field="startDate" value="${t.startDate||''}" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','startDate',this.value)">
         </div>
         <div class="task-field">
           <label>Conclusão</label>
-          <input type="date" value="${t.endDate||''}" ${edit?'':'disabled'}
-                 onchange="updateTask('${compId}','${t.id}','endDate',this.value)">
+          <input type="date" data-field="endDate" value="${t.endDate||''}" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','endDate',this.value)">
         </div>
         <div class="task-field">
           <label>Status ${autoLate ? `<span class="late-badge">⚠ Atrasada</span>` : ''}</label>
-          <select class="status-select" data-status="${t.status}" ${edit?'':'disabled'}
-                  onchange="updateTask('${compId}','${t.id}','status',this.value); this.dataset.status=this.value;">
+          <select class="status-select" data-field="status" data-status="${t.status}" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','status',this.value); this.dataset.status=this.value;">
             ${STATUS_OPTIONS.map(s => `<option ${s===t.status?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
         <div class="task-field">
           <label>Custo (R$)</label>
-          <input type="number" step="0.01" min="0" value="${t.cost||''}" placeholder="0,00" ${edit?'':'disabled'}
-                 onchange="updateTask('${compId}','${t.id}','cost',this.value)">
+          <input type="number" data-field="cost" step="0.01" min="0" value="${t.cost||''}" placeholder="0,00" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','cost',this.value)">
         </div>
         <div class="task-field">
           <label>Resultado (R$)</label>
-          <input type="number" step="0.01" min="0" value="${t.result||''}" placeholder="0,00" ${edit?'':'disabled'}
-                 onchange="updateTask('${compId}','${t.id}','result',this.value)">
+          <input type="number" data-field="result" step="0.01" min="0" value="${t.result||''}" placeholder="0,00" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','result',this.value)">
         </div>
         <div class="task-field full">
           <label>Observações</label>
-          <textarea placeholder="Anotações..." ${edit?'':'disabled'}
-                    onchange="updateTask('${compId}','${t.id}','notes',this.value)">${escapeHtml(t.notes||'')}</textarea>
+          <textarea data-field="notes" placeholder="Anotações..." ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','notes',this.value)">${escapeHtml(t.notes||'')}</textarea>
         </div>
       </div>
       <div class="attachments">
