@@ -127,26 +127,3 @@ async function openNotif(notifId){
     }
   }
 }
-
-  // 3. Atualiza a UI
-  renderNotificationsBadge();
-  document.querySelector('.notif-panel')?.remove();
-  $('bellBtn').classList.remove('active');
-  
-  // 4. Lógica original de abrir a tarefa
-  if(n.taskId){
-    const found = findTask(n.taskId);
-    if(found){
-      state.currentCompany = found.compId;
-      // Verifica se o seletor de empresa existe (já que ele fica no menu do usuário)
-      const compSelect = $('companySelect');
-      if(compSelect) compSelect.value = found.compId;
-      
-      showView('objetivos');
-      setTimeout(() => {
-        $(`obj-${found.objective.id}`)?.classList.add('open');
-        document.querySelector(`[data-task-id="${n.taskId}"]`)?.scrollIntoView({behavior:'smooth', block:'center'});
-      }, 60);
-    }
-  }
-}
