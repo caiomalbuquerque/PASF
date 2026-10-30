@@ -6,8 +6,13 @@ function renderUsers(){
       Você não tem permissão para acessar esta área.</div></div>`;
     return;
   }
+// ... (início da função renderUsers)
   const scopeAll = can('scope') === 'all';
-  const list = scopeAll ? state.users : state.users.filter(u => u.companyId === state.currentCompany);
+  let list = scopeAll ? state.users : state.users.filter(u => u.companyId === state.currentCompany);
+  
+  // NOVA LINHA: Filtra para remover o próprio Admin da listagem
+  list = list.filter(u => u.role !== 'admin');
+// ... (resto do código)
 
   el.innerHTML = `
     <div class="page-header">
