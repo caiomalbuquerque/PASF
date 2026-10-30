@@ -35,7 +35,15 @@
       gestorId: p.manager_id
     }));
 
-    state.auditLog = []; 
+    state.auditLog = (auditLogs || []).map(a => ({
+      id: a.id,
+      taskId: a.task_id,
+      userId: a.user_id,
+      field: a.field_changed,
+      oldValue: a.old_value,
+      newValue: a.new_value,
+      timestamp: a.created_at
+    }));
     state.notifications = (notifications || []).map(n => ({
       ...n, userId: n.user_id, taskId: n.task_id, read: n.is_read, createdAt: n.created_at
     }));
@@ -96,4 +104,9 @@ function initRealtime(){
       renderNotificationsBadge();
     })
     .subscribe();
+
+  const { data: auditLogs, error: errAudit } = await window.db.from('audit_logs')
+  .select('*')
+  .order('created_at', { ascending: true });
+if (errAudit) throw new Error(`Erro em Audit Logs: ${errAudit.message}`);
 }
