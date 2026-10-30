@@ -113,7 +113,7 @@ function initRealtime(){
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${state.currentUser.id}` }, payload => {
       const n = payload.new;
       state.notifications.unshift({
-        id: n.id, userId: n.user_id, taskId: n.task_id, message: n.message, read: n.is_read, createdAt: n.created_at
+        id: n.id, userId: n.user_id, taskId: n.task_id, message: n.message, read: n.is_read, createdAt: n.created_at, targetField: n.target_field
       });
       renderNotificationsBadge();
     })
