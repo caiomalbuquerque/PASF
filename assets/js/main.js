@@ -34,16 +34,9 @@
       const { data, error: errAudit } = await window.db.from('audit_logs')
         .select('*')
         .order('created_at', { ascending: true });
-      if (errAudit) {
-        console.warn('Audit logs indisponíveis (não bloqueante):', errAudit.message);
-      } else {
-        auditLogs = data || [];
-      }
-    } catch (e) {
-      console.warn('Falha ao carregar audit_logs:', e);
-    }
+      if (!errAudit) auditLogs = data || [];
+    } catch (e) { console.warn('Audit logs indisponíveis:', e); }
 
-    // Reconstrói o estado em memória mapeando snake_case -> camelCase
     state.companies = companies || [];
     
     state.users = (profiles || []).map(p => ({
@@ -53,52 +46,35 @@
     }));
 
     state.auditLog = (auditLogs || []).map(a => ({
-      id: a.id,
-      taskId: a.task_id,
-      userId: a.user_id,
-      field: a.field_changed,
-      oldValue: a.old_value,
-      newValue: a.new_value,
-      timestamp: a.created_at
+      id: a.id, taskId: a.task_id, userId: a.user_id, field: a.field_changed,
+      oldValue: a.old_value, newValue: a.new_value, timestamp: a.created_at
     }));
+    
     state.notifications = (notifications || []).map(n => ({
       ...n, userId: n.user_id, taskId: n.task_id, read: n.is_read, createdAt: n.created_at, targetField: n.target_field
     }));
     
-    // Agrupa objetivos e tarefas
     state.objectives = {};
     state.companies.forEach(c => { state.objectives[c.id] = []; });
     
     (objectives || []).forEach(obj => {
       if (!state.objectives[obj.company_id]) state.objectives[obj.company_id] = [];
       
-      // ORDENAÇÃO AQUI: Pega as tarefas, ordena pelo sort_order e depois por data
-      // ORDENAÇÃO AQUI: Pega as tarefas, ordena pelo sort_order e depois por data
       const objTasks = (tasks || [])
         .filter(t => t.objective_id === obj.id)
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.created_at) - new Date(b.created_at))
         .map(t => {
-          // Busca os anexos desta tarefa específica
           const taskAtts = (attachments || [])
             .filter(a => a.task_id === t.id)
             .map(a => ({ id: a.id, name: a.file_name, path: a.file_path }));
 
-          return {
-            ...t, 
-            responsibleId: t.responsible_id, 
-            startDate: t.start_date, 
-            endDate: t.end_date,
-            attachments: taskAtts // Agora ele puxa os anexos reais
-          };
+          return { ...t, responsibleId: t.responsible_id, startDate: t.start_date, endDate: t.end_date, attachments: taskAtts };
         });
       
-      state.objectives[obj.company_id].push({
-        ...obj, monthlySavings: obj.monthly_savings, tasks: objTasks
-      });
+      state.objectives[obj.company_id].push({ ...obj, monthlySavings: obj.monthly_savings, tasks: objTasks });
     });
 
     state.currentUser = user;
-    // Usa o companyId mapeado no login
     state.currentCompany = (user.companyId ? user.companyId : state.companies[0]?.id) || null;
 
     if (loadingEl) loadingEl.style.display = 'none';
@@ -114,20 +90,44 @@
   } catch (error) {
     console.error("Erro detalhado:", error);
     if (loadingEl) loadingEl.style.display = 'none';
-    alert("Falha ao carregar dados:\n\n" + error.message);
+    showToast("Falha ao carregar dados: " + error.message, 'error');
   }
 })();
 
-/* Realtime - Notificações */
+/* Realtime - Notificações e Tarefas */
 function initRealtime(){
-  window.db.channel('custom-all-channel')
+  // 1. Canal de Notificações
+  window.db.channel(`notifs:${state.currentUser.id}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${state.currentUser.id}` }, payload => {
       const n = payload.new;
       state.notifications.unshift({
         id: n.id, userId: n.user_id, taskId: n.task_id, message: n.message, read: n.is_read, createdAt: n.created_at, targetField: n.target_field
       });
       renderNotificationsBadge();
+      showToast("Nova notificação recebida!", "info");
     })
     .subscribe();
 
+  // 2. Canal de Tarefas (Sincronização em Tempo Real)
+  window.db.channel('tasks_realtime')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
+      const updatedTask = payload.new;
+      const found = findTask(updatedTask.id);
+      
+      if (found) {
+        found.task = {
+          ...found.task,
+          ...updatedTask,
+          responsibleId: updatedTask.responsible_id,
+          startDate: updatedTask.start_date,
+          endDate: updatedTask.end_date
+        };
+        
+        refreshObjectiveDOM(found.objective.id, found.compId);
+        if (typeof renderObjectivesListOnly === 'function') {
+          renderObjectivesListOnly(); 
+        }
+      }
+    })
+    .subscribe();
 }
