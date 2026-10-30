@@ -49,7 +49,16 @@ async function createObjective(title, savings){
   if (error) { showToast("Erro ao criar objetivo.", "error"); return; }
   
   if(!state.objectives[state.currentCompany]) state.objectives[state.currentCompany] = [];
-  state.objectives[state.currentCompany].push({ ...data, monthlySavings: data.monthly_savings, tasks: [] });
+  
+  // Garante que o created_at exista no state para ordenar corretamente
+  const newObj = { 
+    ...data, 
+    monthlySavings: data.monthly_savings, 
+    tasks: [],
+    created_at: data.created_at || new Date().toISOString()
+  };
+  
+  state.objectives[state.currentCompany].push(newObj);
   renderObjectivesListOnly();
   showToast("Objetivo criado com sucesso!", "success");
 }
