@@ -6,8 +6,8 @@ function renderCompanies(){
     return;
   }
   
-  // Mostra todas as empresas (inclusive as inativas) para o Admin, ordenando por nome
-  const comps = [...state.companies].sort((a,b) => a.name.localeCompare(b.name));
+  // AQUI ESTÁ A MUDANÇA: Ordenando pelo ID numérico (crescente)
+  const comps = [...state.companies].sort((a,b) => a.id - b.id);
 
   el.innerHTML = `
     <div class="page-header">
@@ -79,7 +79,6 @@ async function submitEditCompany(companyId, btn) {
 
   btn.textContent = 'Salvando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  // Força o retorno do dado para garantir que o banco alterou
   const { data, error } = await window.db.from('companies').update({
     name: name, 
     is_active: is_active
