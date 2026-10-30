@@ -20,7 +20,6 @@ function findTask(taskId){
   return null;
 }
 
-// Atualiza apenas os totais na tela sem recarregar o HTML inteiro (evita a piscada)
 function refreshObjectiveDOM(objId, compId) {
   const o = (state.objectives[compId] || []).find(x => x.id === objId);
   if (!o) return;
@@ -32,7 +31,6 @@ function refreshObjectiveDOM(objId, compId) {
   const totalResult = allTasks.reduce((s,t) => s + (+t.result||0), 0);
   const net = totalResult - totalCost;
 
-  // Atualiza a meta (tarefas, concluídas, atrasadas)
   const metaEl = $(`meta-${objId}`);
   if (metaEl) {
     metaEl.innerHTML = `
@@ -42,7 +40,6 @@ function refreshObjectiveDOM(objId, compId) {
     `;
   }
 
-  // Atualiza os totais de custo e resultado
   const totalsEl = $(`totals-${objId}`);
   if (totalsEl) {
     totalsEl.innerHTML = `
@@ -65,7 +62,7 @@ async function updateTask(compId, taskId, field, value){
                   field === 'endDate' ? 'end_date' : field;
 
   const { error } = await window.db.from('tasks').update({ [dbField]: value || null }).eq('id', taskId);
-  if (error) { alert("Erro ao salvar: " + error.message); return; }
+  if (error) { showToast("Erro ao salvar tarefa: " + error.message, "error"); return; }
 
   found.task[field] = value;
   
@@ -79,7 +76,6 @@ async function updateTask(compId, taskId, field, value){
     }]).select().single();
   
     if (logErr) {
-      // MUDANÇA AQUI: agora o erro aparece no console em vermelho
       console.error('❌ Erro do Supabase ao salvar log:', logErr);
     } else if (logData) {
       state.auditLog.push({
@@ -89,34 +85,29 @@ async function updateTask(compId, taskId, field, value){
         field: logData.field_changed,
         oldValue: logData.old_value,
         newValue: logData.new_value,
-        timestamp: logData.created_at || new Date().toISOString() // fallback se created_at faltar
+        timestamp: logData.created_at || new Date().toISOString()
       });
     }
   }
 
-  // Notifica o gestor
   if(state.currentUser.gestorId && state.currentUser.gestorId !== state.currentUser.id){
-    const { error: notifErr } = await window.db.from('notifications').insert([{
+    await window.db.from('notifications').insert([{
       user_id: state.currentUser.gestorId,
       message: `${state.currentUser.name} atualizou "${FIELD_LABELS[field]||field}" da tarefa "${found.task.description || '(sem descrição)'}"`,
       task_id: taskId,
       target_field: field
     }]);
-    if (notifErr) console.error('❌ Erro ao notificar gestor:', notifErr);
   }
 
-  // Notifica o novo responsável
   if(field === 'responsibleId' && value !== state.currentUser.id){
-    const { error: notifErr } = await window.db.from('notifications').insert([{
+    await window.db.from('notifications').insert([{
       user_id: value,
       message: `Você foi atribuído(a) à tarefa "${found.task.description || '(sem descrição)'}"`,
       task_id: taskId,
       target_field: field
     }]);
-    if (notifErr) console.error('❌ Erro ao notificar responsável:', notifErr);
   }
 
-  // Atualiza o nome da tarefa na capa (quando fechada)
   if (field === 'description') {
     const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
     if (taskCard) {
@@ -125,12 +116,9 @@ async function updateTask(compId, taskId, field, value){
     }
   }
 
-  // Substitui renderObjectives() por atualização cirúrgica
   refreshObjectiveDOM(found.objective.id, compId);
   
-  // Atualiza o badge de status se for a data ou status
   if (field === 'status' || field === 'endDate') {
-      // Encontra o card da tarefa específico e atualiza o label "Atrasada"
       const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
       if (taskCard) {
           const statusLabel = taskCard.querySelector('.task-field:nth-child(4) label');
@@ -148,8 +136,6 @@ async function addTask(compId, objId){
   if(!o) return;
   
   const firstUser = state.users.find(u => u.companyId === Number(compId));
-  
-  // Calcula qual será a próxima posição (último lugar)
   const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
   
   const newTask = {
@@ -161,25 +147,26 @@ async function addTask(compId, objId){
   };
 
   const { data, error } = await window.db.from('tasks').insert([newTask]).select().single();
-  if (error) { alert("Erro: " + error.message); return; }
+  if (error) { showToast("Erro ao criar tarefa.", "error"); return; }
   
-  o.tasks.push({ ...data, responsibleId: data.responsible_id, startDate: data.start_date, endDate: data.end_date });
+  o.tasks.push({ ...data, responsibleId: data.responsible_id, startDate: data.start_date, endDate: data.end_date, attachments: [] });
   
   if(!state._openObjectives) state._openObjectives = [];
   if(!state._openObjectives.includes(String(objId))) state._openObjectives.push(String(objId));
   
-  renderObjectives(); 
+  renderObjectivesListOnly(); 
 }
 
 async function removeTask(compId, objId, taskId){
   if(!confirm('Remover esta tarefa?')) return;
   const { error } = await window.db.from('tasks').delete().eq('id', taskId);
-  if (error) { alert("Erro ao remover: " + error.message); return; }
+  if (error) { showToast("Erro ao remover tarefa.", "error"); return; }
   
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(o) o.tasks = o.tasks.filter(t => t.id !== taskId);
   
-  renderObjectives();
+  renderObjectivesListOnly();
+  showToast("Tarefa removida.", "success");
 }
 
 async function addAttachments(compId, taskId, input){
@@ -187,6 +174,10 @@ async function addAttachments(compId, taskId, input){
   if(!found) return;
   
   const files = Array.from(input.files || []);
+  if (files.length === 0) return;
+  
+  showToast("Fazendo upload...", "info");
+
   for (const file of files) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${taskId}/${uid()}.${fileExt}`;
@@ -195,7 +186,10 @@ async function addAttachments(compId, taskId, input){
       .from('task-attachments')
       .upload(fileName, file);
 
-    if (uploadError) { alert("Erro no upload: " + uploadError.message); continue; }
+    if (uploadError) { 
+      showToast("Erro no upload: " + uploadError.message, "error"); 
+      continue; 
+    }
 
     const { data, error } = await window.db.from('task_attachments').insert([{
       task_id: taskId,
@@ -207,10 +201,13 @@ async function addAttachments(compId, taskId, input){
     if (!error) {
       found.task.attachments = found.task.attachments || [];
       found.task.attachments.push({ id: data.id, name: data.file_name, path: data.file_path });
+    } else {
+      showToast("Erro ao salvar registro do anexo.", "error");
     }
   }
   input.value = '';
-  renderObjectives();
+  renderObjectivesListOnly();
+  showToast("Anexo(s) enviado(s)!", "success");
 }
 
 async function removeAttachment(compId, taskId, attachId){
@@ -222,26 +219,26 @@ async function removeAttachment(compId, taskId, attachId){
   if(attach?.path) {
     await window.db.storage.from('task-attachments').remove([attach.path]);
   }
-  await window.db.from('task_attachments').delete().eq('id', attachId);
+  const { error } = await window.db.from('task_attachments').delete().eq('id', attachId);
+  if (error) { showToast("Erro ao deletar anexo.", "error"); return; }
   
   found.task.attachments = found.task.attachments.filter(a => a.id !== attachId);
-  renderObjectives();
+  renderObjectivesListOnly();
+  showToast("Anexo removido.", "success");
 }
 
 async function openAttachment(filePath) {
   if (!filePath) return;
   
-  // Gera um link seguro temporário (válido por 60 segundos)
   const { data, error } = await window.db.storage
     .from('task-attachments')
     .createSignedUrl(filePath, 60);
 
   if (error) {
     console.error("Erro ao gerar link do arquivo:", error);
-    alert("Não foi possível abrir o arquivo. Verifique se ele ainda existe no Storage.");
+    showToast("Não foi possível abrir o arquivo.", "error");
     return;
   }
 
-  // Abre o arquivo em uma nova aba
   window.open(data.signedUrl, '_blank');
 }
