@@ -215,4 +215,44 @@ select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;b
   position: relative;
   z-index: 10;
 }
+
+/* Cole aqui todo o conteúdo anterior, mas altere os pontos abaixo: */
+
+/* No início do arquivo, adicione as variáveis de status no :root do base.css (ou aqui mesmo) */
+:root {
+  --status-done-bg: #d1fae5; --status-done-text: #065f46;
+  --status-progress-bg: #dbeafe; --status-progress-text: #1e40af;
+  --status-todo-bg: #f3f4f6; --status-todo-text: #4b5563;
+  --status-late-bg: #fee2e2; --status-late-text: #991b1b;
+  --status-cancel-bg: #e5e7eb; --status-cancel-text: #374151;
+}
+
+/* Localize e substitua estas classes: */
+.objective-savings .label{font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;font-weight: 600}
+.savings-edit label{font-size:13px;font-weight:600;color:var(--gray-600);white-space:nowrap}
+.tasks-header h4{font-size:14px;font-weight:700;color:var(--gray-700);display:flex;align-items:center;gap:6px}
+.tasks-header .count{background:var(--gray-200);color:var(--gray-600);font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px}
+
+/* Inputs da Tarefa */
+.task-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--gray-600);margin-bottom:4px}
+.task-field select,.task-field input,.task-field textarea{width:100%;padding:7px 10px;border:1px solid var(--gray-200);
+  border-radius:6px;background:var(--gray-50);color:var(--gray-800);outline:none;transition:var(--transition);font-size:13px}
+
+/* Cores de Status (Padronizadas) */
+select.status-select{font-weight:600}
+select.status-select[data-status="Concluída"]{background:var(--status-done-bg);color:var(--status-done-text);border-color:#6ee7b7}
+select.status-select[data-status="Em Andamento"]{background:var(--status-progress-bg);color:var(--status-progress-text);border-color:#93c5fd}
+select.status-select[data-status="A Iniciar"]{background:var(--status-todo-bg);color:var(--status-todo-text);border-color:#d1d5db}
+select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg);color:var(--status-cancel-text);border-color:#9ca3af;text-decoration:line-through}
+.late-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--status-late-text);
+  background:var(--status-late-bg);padding:2px 7px;border-radius:4px;margin-left:4px;vertical-align:middle}
+
+/* Totais */
+.objective-totals .t .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);font-weight:700}
+.objective-totals .t .value{font-size:15px;font-weight:800;color:var(--gray-800);margin-top:2px}
+
+/* Histórico */
+.history-item{font-size:13px}
+.history-item .head{font-size:12px}
 .history-item .new{color:var(--accent-dark);font-weight:600;margin:0 4px}
