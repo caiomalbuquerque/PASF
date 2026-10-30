@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PASF — Plano de Ação para Sustentabilidade Financeira">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
   <title>PASF — Plano de Ação</title>
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/layout.css">
@@ -21,7 +23,11 @@
 
   <!-- App Principal -->
   <div id="app" class="app hidden">
-    <aside class="sidebar">
+    
+    <!-- Fundo escuro para mobile -->
+    <div id="sidebarOverlay" class="sidebar-overlay hidden" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <div class="logo-mark">P</div>
         <div>
@@ -30,20 +36,23 @@
         </div>
       </div>
       <nav class="sidebar-nav" id="sidebarNav"></nav>
-      <!-- O rodapé com o usuário foi removido daqui -->
     </aside>
 
     <div class="main-wrapper">
       <header class="topbar">
         
-        <!-- O seletor de empresas foi removido daqui, agora fica no menu do usuário -->
+        <!-- Botão Hamburger (Só aparece no mobile) -->
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+
+        <!-- Seletor de Empresa na Topbar -->
+        <div id="topbarCompanySelector" class="company-selector-container"></div>
         
         <div class="topbar-actions">
           <button class="icon-btn" id="bellBtn" title="Notificações" onclick="toggleNotifications(event)">
-            ◔<span class="badge hidden" id="bellBadge">0</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="badge hidden" id="bellBadge">0</span>
           </button>
           
-          <!-- Área do Usuário (Clicável) -->
           <div class="topbar-user" id="userMenuBtn" onclick="toggleUserMenu(event)" style="cursor:pointer">
             <div class="avatar" id="topAvatar">?</div>
             <div>
