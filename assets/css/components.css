@@ -202,4 +202,17 @@ select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;b
   border: 2px dashed var(--primary);
   background: var(--gray-50);
 }
+
+/* Destaque para navegação via notificação */
+@keyframes highlightField {
+  0% { box-shadow: 0 0 0 0 rgba(15, 76, 129, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(15, 76, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(15, 76, 129, 0); }
+}
+.pulse-highlight {
+  animation: highlightField 1.5s ease-out 2;
+  border-color: var(--primary) !important;
+  position: relative;
+  z-index: 10;
+}
 .history-item .new{color:var(--accent-dark);font-weight:600;margin:0 4px}
