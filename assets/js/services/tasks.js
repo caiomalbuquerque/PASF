@@ -166,7 +166,7 @@ async function addTask(compId, objId){
   o.tasks.push({ ...data, responsibleId: data.responsible_id, startDate: data.start_date, endDate: data.end_date });
   
   if(!state._openObjectives) state._openObjectives = [];
-  if(!state._openObjectives.includes(objId)) state._openObjectives.push(objId);
+  if(!state._openObjectives.includes(String(objId))) state._openObjectives.push(String(objId));
   
   renderObjectives(); 
 }
