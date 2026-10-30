@@ -14,7 +14,7 @@
     const { data: profiles, error: errProf } = await window.db.from('profiles').select('*');
     if (errProf) throw new Error(`Erro em Usuários: ${errProf.message}`);
 
-    const { data: objectives, error: errObj } = await window.db.from('objectives').select('*');
+    const { data: objectives, error: errObj } = await window.db.from('objectives').select('*').order('created_at', { ascending: true });
     if (errObj) throw new Error(`Erro em Objetivos: ${errObj.message}`);
 
     const { data: tasks, error: errTasks } = await window.db.from('tasks').select('*');
