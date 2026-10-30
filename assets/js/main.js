@@ -109,8 +109,14 @@ function initRealtime(){
     .subscribe();
 
   // 2. Canal de Tarefas (Sincronização em Tempo Real)
+  console.log("🔌 Iniciando Realtime de Tarefas...");
+  
   window.db.channel('tasks_realtime')
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
+      console.log("🔔 Realtime: Evento recebido do banco!", payload);
+      
+      if (payload.eventType === 'DELETE') return; // Ignora deleções por enquanto
+      
       const updatedTask = payload.new;
       const found = findTask(updatedTask.id);
       
@@ -123,11 +129,19 @@ function initRealtime(){
           endDate: updatedTask.end_date
         };
         
-        refreshObjectiveDOM(found.objective.id, found.compId);
-        if (typeof renderObjectivesListOnly === 'function') {
-          renderObjectivesListOnly(); 
+        // Atualiza a tela que o usuário está vendo no momento
+        const activeView = document.querySelector('.nav-item.active')?.dataset.view;
+        
+        if (activeView === 'objetivos' || activeView === 'dashboard') {
+          refreshObjectiveDOM(found.objective.id, found.compId);
+          if (typeof renderObjectivesListOnly === 'function') renderObjectivesListOnly();
+          if (activeView === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
+        } else if (activeView === 'minhas' && typeof renderMyTasks === 'function') {
+          renderMyTasks();
         }
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log("📡 Status do Canal Tarefas:", status); // Deve imprimir "SUBSCRIBED"
+    });
 }
