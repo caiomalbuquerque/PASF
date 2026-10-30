@@ -70,13 +70,25 @@ async function updateTask(compId, taskId, field, value){
   found.task[field] = value;
   
   if (field !== 'created_at' && field !== 'updated_at') {
-    await window.db.from('audit_logs').insert([{
+    const { data: logData, error: logErr } = await window.db.from('audit_logs').insert([{
       task_id: taskId,
       user_id: state.currentUser.id,
       field_changed: FIELD_LABELS[field] || field,
       old_value: String(oldValue || ''),
       new_value: String(value || '')
-    }]);
+    }]).select().single();
+  
+    if (!logErr && logData) {
+      state.auditLog.push({
+        id: logData.id,
+        taskId: logData.task_id,
+        userId: logData.user_id,
+        field: logData.field_changed,
+        oldValue: logData.old_value,
+        newValue: logData.new_value,
+        timestamp: logData.created_at
+      });
+    }
   }
 
   if(state.currentUser.gestorId && state.currentUser.gestorId !== state.currentUser.id){
