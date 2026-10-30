@@ -59,8 +59,11 @@ function objectiveHTML(o, idx, compId){
   const canEditObj = can('editObj');
   const canAddTask = can('addTask');
 
-  // Verifica se este objetivo deve estar aberto no estado global
+  // Encontre:
   const isOpen = state._openObjectives && state._openObjectives.includes(o.id);
+  
+  // Substitua por:
+  const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
 
   return `
   <div class="objective-card ${isOpen ? 'open' : ''}" id="obj-${o.id}" data-id="${o.id}">
@@ -111,13 +114,13 @@ function toggleObjective(id){
   if (el.classList.contains('open')) {
     el.classList.remove('open');
     if(state._openObjectives) {
-      state._openObjectives = state._openObjectives.filter(x => x !== id);
+      state._openObjectives = state._openObjectives.filter(x => String(x) !== String(id));
     }
   } else {
     el.classList.add('open');
     if(!state._openObjectives) state._openObjectives = [];
-    if(!state._openObjectives.includes(id)) {
-      state._openObjectives.push(id);
+    if(!state._openObjectives.includes(String(id))) {
+      state._openObjectives.push(String(id));
     }
   }
 }
