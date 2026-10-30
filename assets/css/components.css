@@ -1,3 +1,11 @@
+:root {
+  --status-done-bg: #d1fae5; --status-done-text: #065f46;
+  --status-progress-bg: #dbeafe; --status-progress-text: #1e40af;
+  --status-todo-bg: #f3f4f6; --status-todo-text: #4b5563;
+  --status-late-bg: #fee2e2; --status-late-text: #991b1b;
+  --status-cancel-bg: #e5e7eb; --status-cancel-text: #374151;
+}
+
 /* Painéis */
 .panel{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);border:1px solid var(--gray-100);overflow:hidden}
 .panel-header{padding:16px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
@@ -37,7 +45,7 @@
 .objective-title h3{font-size:15px;font-weight:600;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .objective-title .meta{display:flex;gap:14px;margin-top:4px;font-size:11px;color:var(--gray-500);flex-wrap:wrap}
 .objective-savings{text-align:right;flex-shrink:0}
-.objective-savings .label{font-size:10px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em}
+.objective-savings .label{font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
 .objective-savings .value{font-size:16px;font-weight:800;color:var(--accent-dark)}
 .objective-body{display:none;border-top:1px solid var(--gray-100);padding:18px 20px;background:var(--gray-50)}
 .objective-card.open .objective-body{display:block;}
@@ -45,7 +53,7 @@
 
 .savings-edit{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--gray-200);
   border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap}
-.savings-edit label{font-size:12px;font-weight:600;color:var(--gray-600);white-space:nowrap}
+.savings-edit label{font-size:13px;font-weight:600;color:var(--gray-600);white-space:nowrap}
 .savings-edit .input-wrap{position:relative;flex:1;max-width:220px;min-width:140px}
 .savings-edit .input-wrap span{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--gray-400)}
 .savings-edit input{width:100%;padding:8px 10px 8px 32px;border:1px solid var(--gray-200);border-radius:6px;
@@ -53,15 +61,15 @@
 .savings-edit input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,76,129,.1)}
 
 .tasks-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.tasks-header h4{font-size:13px;font-weight:700;color:var(--gray-700);display:flex;align-items:center;gap:6px}
-.tasks-header .count{background:var(--gray-200);color:var(--gray-600);font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px}
+.tasks-header h4{font-size:14px;font-weight:700;color:var(--gray-700);display:flex;align-items:center;gap:6px}
+.tasks-header .count{background:var(--gray-200);color:var(--gray-600);font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px}
 
 /* Task card */
 .task-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:10px;
   transition:var(--transition);position:relative;overflow:hidden}
 .task-card:hover{border-color:var(--gray-300);box-shadow:var(--shadow-sm)}
 
-/* Cabeçalho da tarefa (Sanfona fechada) */
+/* Cabeçalho da tarefa */
 .task-card .task-header{display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;user-select:none;background:#fff}
 .task-card.open .task-header{border-bottom:1px solid var(--gray-100)}
 .task-card .task-header .chevron{font-size:10px;color:var(--gray-400);transition:transform .2s ease;width:16px;text-align:center}
@@ -75,7 +83,7 @@
 .task-actions button:hover{background:var(--gray-100);color:var(--gray-700)}
 .task-actions button.danger:hover{background:#fee2e2;color:var(--danger)}
 
-/* Corpo da tarefa (Sanfona aberta - Visual Original) */
+/* Corpo da tarefa */
 .task-body{display:none;padding:14px;background:#fff}
 .task-card.open .task-body{display:block}
 
@@ -86,10 +94,10 @@
 .task-card .task-desc:disabled{background:transparent;border-color:transparent}
 
 .task-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.task-field label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
-  color:var(--gray-500);margin-bottom:3px}
-.task-field select,.task-field input,.task-field textarea{width:100%;padding:6px 9px;border:1px solid var(--gray-200);
-  border-radius:6px;background:var(--gray-50);color:var(--gray-800);outline:none;transition:var(--transition);font-size:12px}
+.task-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--gray-600);margin-bottom:4px}
+.task-field select,.task-field input,.task-field textarea{width:100%;padding:7px 10px;border:1px solid var(--gray-200);
+  border-radius:6px;background:var(--gray-50);color:var(--gray-800);outline:none;transition:var(--transition);font-size:13px}
 .task-field select:focus,.task-field input:focus,.task-field textarea:focus{border-color:var(--primary);
   background:#fff;box-shadow:0 0 0 3px rgba(15,76,129,.1)}
 .task-field select:disabled,.task-field input:disabled,.task-field textarea:disabled{background:transparent;border-color:transparent}
@@ -97,19 +105,19 @@
 .task-field textarea{resize:vertical;min-height:42px;font-family:inherit}
 
 select.status-select{font-weight:600}
-select.status-select[data-status="Concluída"]{background:#d1fae5;color:#065f46;border-color:#6ee7b7}
-select.status-select[data-status="Em Andamento"]{background:#dbeafe;color:#1e40af;border-color:#93c5fd}
-select.status-select[data-status="A Iniciar"]{background:#f3f4f6;color:#4b5563;border-color:#d1d5db}
-select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;border-color:#9ca3af;text-decoration:line-through}
-.late-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#991b1b;
-  background:#fee2e2;padding:1px 6px;border-radius:4px;margin-left:4px;vertical-align:middle}
+select.status-select[data-status="Concluída"]{background:var(--status-done-bg);color:var(--status-done-text);border-color:#6ee7b7}
+select.status-select[data-status="Em Andamento"]{background:var(--status-progress-bg);color:var(--status-progress-text);border-color:#93c5fd}
+select.status-select[data-status="A Iniciar"]{background:var(--status-todo-bg);color:var(--status-todo-text);border-color:#d1d5db}
+select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg);color:var(--status-cancel-text);border-color:#9ca3af;text-decoration:line-through}
+.late-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--status-late-text);
+  background:var(--status-late-bg);padding:2px 7px;border-radius:4px;margin-left:4px;vertical-align:middle}
 
 /* Totais */
 .objective-totals{display:flex;gap:24px;padding:12px 16px;background:#fff;border:1px solid var(--gray-200);
   border-radius:var(--radius);margin-top:14px;flex-wrap:wrap}
 .objective-totals .t{display:flex;flex-direction:column}
-.objective-totals .t .label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);font-weight:600}
-.objective-totals .t .value{font-size:14px;font-weight:800;color:var(--gray-800);margin-top:2px}
+.objective-totals .t .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);font-weight:700}
+.objective-totals .t .value{font-size:15px;font-weight:800;color:var(--gray-800);margin-top:2px}
 .objective-totals .t .value.pos{color:var(--accent-dark)}
 .objective-totals .t .value.neg{color:var(--danger)}
 
@@ -124,7 +132,7 @@ select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;b
 
 /* Tabela admin */
 .admin-table{width:100%;border-collapse:collapse}
-.admin-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-500);
+.admin-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-500);
   padding:10px 14px;border-bottom:1px solid var(--gray-200);font-weight:600}
 .admin-table td{padding:12px 14px;border-bottom:1px solid var(--gray-100);font-size:13px;color:var(--gray-700)}
 .admin-table tr:last-child td{border-bottom:none}
@@ -139,7 +147,7 @@ select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;b
 .company-card .stats{display:flex;gap:16px;margin-top:14px}
 .company-card .stats div{display:flex;flex-direction:column}
 .company-card .stats .v{font-size:16px;font-weight:800;color:var(--gray-800)}
-.company-card .stats .l{font-size:10px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em}
+.company-card .stats .l{font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em}
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;
@@ -178,32 +186,20 @@ select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;b
 .notif-empty{padding:32px;text-align:center;color:var(--gray-400);font-size:12px}
 
 /* Histórico */
-.history-item{padding:10px 0;border-bottom:1px solid var(--gray-100);font-size:12px}
+.history-item{padding:10px 0;border-bottom:1px solid var(--gray-100);font-size:13px}
 .history-item:last-child{border-bottom:none}
-.history-item .head{display:flex;align-items:center;gap:8px;color:var(--gray-500);font-size:11px;margin-bottom:4px}
+.history-item .head{display:flex;align-items:center;gap:8px;color:var(--gray-500);font-size:12px;margin-bottom:4px}
 .history-item .body{color:var(--gray-700)}
 .history-item .field{font-weight:600;color:var(--gray-800)}
 .history-item .old{color:var(--danger);text-decoration:line-through;margin:0 4px}
+.history-item .new{color:var(--accent-dark);font-weight:600;margin:0 4px}
 
-/* Drag and Drop de Tarefas */
-.drag-handle {
-  cursor: grab;
-  color: var(--gray-400);
-  font-size: 14px;
-  padding: 0 4px;
-  font-weight: bold;
-  user-select: none;
-}
-.drag-handle:active {
-  cursor: grabbing;
-}
-.task-card.dragging {
-  opacity: 0.4;
-  border: 2px dashed var(--primary);
-  background: var(--gray-50);
-}
+/* Drag and Drop */
+.drag-handle {cursor: grab;color: var(--gray-400);font-size: 14px;padding: 0 4px;font-weight: bold;user-select: none;}
+.drag-handle:active {cursor: grabbing;}
+.task-card.dragging {opacity: 0.4;border: 2px dashed var(--primary);background: var(--gray-50);}
 
-/* Destaque para navegação via notificação */
+/* Destaque via notificação */
 @keyframes highlightField {
   0% { box-shadow: 0 0 0 0 rgba(15, 76, 129, 0.7); }
   70% { box-shadow: 0 0 0 8px rgba(15, 76, 129, 0); }
@@ -215,44 +211,3 @@ select.status-select[data-status="Cancelada"]{background:#e5e7eb;color:#374151;b
   position: relative;
   z-index: 10;
 }
-
-/* Cole aqui todo o conteúdo anterior, mas altere os pontos abaixo: */
-
-/* No início do arquivo, adicione as variáveis de status no :root do base.css (ou aqui mesmo) */
-:root {
-  --status-done-bg: #d1fae5; --status-done-text: #065f46;
-  --status-progress-bg: #dbeafe; --status-progress-text: #1e40af;
-  --status-todo-bg: #f3f4f6; --status-todo-text: #4b5563;
-  --status-late-bg: #fee2e2; --status-late-text: #991b1b;
-  --status-cancel-bg: #e5e7eb; --status-cancel-text: #374151;
-}
-
-/* Localize e substitua estas classes: */
-.objective-savings .label{font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;font-weight: 600}
-.savings-edit label{font-size:13px;font-weight:600;color:var(--gray-600);white-space:nowrap}
-.tasks-header h4{font-size:14px;font-weight:700;color:var(--gray-700);display:flex;align-items:center;gap:6px}
-.tasks-header .count{background:var(--gray-200);color:var(--gray-600);font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px}
-
-/* Inputs da Tarefa */
-.task-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
-  color:var(--gray-600);margin-bottom:4px}
-.task-field select,.task-field input,.task-field textarea{width:100%;padding:7px 10px;border:1px solid var(--gray-200);
-  border-radius:6px;background:var(--gray-50);color:var(--gray-800);outline:none;transition:var(--transition);font-size:13px}
-
-/* Cores de Status (Padronizadas) */
-select.status-select{font-weight:600}
-select.status-select[data-status="Concluída"]{background:var(--status-done-bg);color:var(--status-done-text);border-color:#6ee7b7}
-select.status-select[data-status="Em Andamento"]{background:var(--status-progress-bg);color:var(--status-progress-text);border-color:#93c5fd}
-select.status-select[data-status="A Iniciar"]{background:var(--status-todo-bg);color:var(--status-todo-text);border-color:#d1d5db}
-select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg);color:var(--status-cancel-text);border-color:#9ca3af;text-decoration:line-through}
-.late-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--status-late-text);
-  background:var(--status-late-bg);padding:2px 7px;border-radius:4px;margin-left:4px;vertical-align:middle}
-
-/* Totais */
-.objective-totals .t .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);font-weight:700}
-.objective-totals .t .value{font-size:15px;font-weight:800;color:var(--gray-800);margin-top:2px}
-
-/* Histórico */
-.history-item{font-size:13px}
-.history-item .head{font-size:12px}
-.history-item .new{color:var(--accent-dark);font-weight:600;margin:0 4px}
