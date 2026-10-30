@@ -22,7 +22,7 @@ function renderCompanies(){
         
         return `<div class="company-card" style="opacity:${isInactive ? '0.6' : '1'}; border-left-color:${isInactive?'var(--gray-400)':'var(--primary)'}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <h3>${c.name}</h3>
+            <h3>${escapeHtml(c.name)}</h3>
             ${can('manageUsers') ? `<button class="btn btn-sm btn-ghost" style="padding:2px 6px" onclick="openEditCompanyModal(${c.id})">✎</button>` : ''}
           </div>
           <p>ID: <strong>${c.id}</strong> ${isInactive ? '• <span style="color:var(--danger);font-weight:600">(Inativa)</span>' : ''}</p>
@@ -46,13 +46,17 @@ function openEditCompanyModal(companyId) {
       <button onclick="this.closest('.modal-overlay').remove()">✕</button>
     </div>
     <div class="modal-body">
-      <label>ID da Empresa (Não editável)</label>
-      <input value="${c.id}" disabled style="opacity:0.6;background:var(--gray-100)">
       
+      <!-- Campo do ID (Somente leitura) -->
+      <label>ID da Empresa (Não editável)</label>
+      <input value="${c.id}" disabled style="opacity:0.6;background:var(--gray-100);cursor:not-allowed">
+      
+      <!-- Campo do Nome -->
       <label>Nome da Empresa</label>
       <input id="editCompName" value="${escapeHtml(c.name)}" required>
       
-      <label style="display:flex;align-items:center;gap:8px;margin-top:20px;cursor:pointer">
+      <!-- Campo de Status -->
+      <label style="display:flex;align-items:center;gap:8px;margin-top:24px;cursor:pointer">
         <input type="checkbox" id="editCompActive" ${c.is_active !== false ? 'checked' : ''} style="width:auto;margin:0">
         Empresa Ativa (Exibir nos menus)
       </label>
@@ -75,9 +79,10 @@ async function submitEditCompany(companyId, btn) {
 
   btn.textContent = 'Salvando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  // O .select().single() garante que o banco confirme a alteração da linha
+  // Força o retorno do dado para garantir que o banco alterou
   const { data, error } = await window.db.from('companies').update({
-    name, is_active
+    name: name, 
+    is_active: is_active
   }).eq('id', companyId).select().single();
 
   if(error) { 
@@ -101,5 +106,5 @@ async function submitEditCompany(companyId, btn) {
   }
 
   btn.closest('.modal-overlay').remove();
-  renderCompanies(); // Redesenha a lista na hora
+  renderCompanies();
 }
