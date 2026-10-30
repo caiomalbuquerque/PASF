@@ -227,3 +227,21 @@ async function removeAttachment(compId, taskId, attachId){
   found.task.attachments = found.task.attachments.filter(a => a.id !== attachId);
   renderObjectives();
 }
+
+async function openAttachment(filePath) {
+  if (!filePath) return;
+  
+  // Gera um link seguro temporário (válido por 60 segundos)
+  const { data, error } = await window.db.storage
+    .from('task-attachments')
+    .createSignedUrl(filePath, 60);
+
+  if (error) {
+    console.error("Erro ao gerar link do arquivo:", error);
+    alert("Não foi possível abrir o arquivo. Verifique se ele ainda existe no Storage.");
+    return;
+  }
+
+  // Abre o arquivo em uma nova aba
+  window.open(data.signedUrl, '_blank');
+}
