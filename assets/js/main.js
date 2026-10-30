@@ -59,7 +59,7 @@
       timestamp: a.created_at
     }));
     state.notifications = (notifications || []).map(n => ({
-      ...n, userId: n.user_id, taskId: n.task_id, read: n.is_read, createdAt: n.created_at
+      ...n, userId: n.user_id, taskId: n.task_id, read: n.is_read, createdAt: n.created_at, targetField: n.target_field
     }));
     
     // Agrupa objetivos e tarefas
