@@ -47,9 +47,23 @@ function toggleNotifications(ev){
   }, 0);
 }
 
-function markAllRead(){
-  state.notifications.forEach(n => { if(n.userId === state.currentUser.id) n.read = true; });
-  saveState();
+async function markAllRead(){
+  // 1. Atualiza no Supabase todas as notificações não lidas deste usuário
+  const { error } = await window.db.from('notifications')
+    .update({ is_read: true })
+    .eq('user_id', state.currentUser.id)
+    .eq('is_read', false);
+
+  if (error) {
+    console.error('Erro ao marcar todas como lidas no banco:', error);
+  }
+
+  // 2. Atualiza o estado local
+  state.notifications.forEach(n => { 
+    if(n.userId === state.currentUser.id) n.read = true; 
+  });
+  
+  // 3. Atualiza a UI
   renderNotificationsBadge();
   document.querySelector('.notif-panel')?.remove();
   $('bellBtn').classList.remove('active');
