@@ -4,7 +4,6 @@ function renderObjectives(){
   const el = $('view-objetivos');
   const isGlobal = can('scope') === 'all';
   
-  // Cria a estrutura base do cabeçalho APENAS UMA VEZ
   if (!el.querySelector('#obj-header-container')) {
     let headerHTML = `
       <div id="obj-header-container">
@@ -60,8 +59,6 @@ function renderObjectivesListOnly(){
   comps.forEach(comp => {
     let objs = state.objectives[comp.id] || [];
     if(search) objs = objs.filter(o => o.title.toLowerCase().includes(search));
-    
-    // Filtra objetivos que contenham a tarefa com o status desejado
     if(fStatus) objs = objs.filter(o => o.tasks.some(t => effectiveStatus(t) === fStatus));
 
     if(isGlobal){
@@ -92,8 +89,8 @@ function objectiveHTML(o, idx, compId){
   const canAddTask = can('addTask');
 
   const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
+  const isEditing = state._editingObjectives && state._editingObjectives.includes(String(o.id));
 
-  // Filtra as tarefas internas com base no status selecionado no topo da página
   const filteredTasks = state._objStatus 
     ? allTasks.filter(t => effectiveStatus(t) === state._objStatus)
     : allTasks;
@@ -107,45 +104,52 @@ function objectiveHTML(o, idx, compId){
     <div class="objective-header" onclick="toggleObjective('${o.id}')">
       <span class="chevron">▶</span>
       <span class="objective-num">${String(idx+1).padStart(2,'0')}</span>
-      <div class="objective-title">
-        <h3>${escapeHtml(o.title)}</h3>
+      
+      <div class="objective-title" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        
+        <!-- ÁREA DO TÍTULO COM EDIÇÃO INLINE -->
+        ${isEditing ? `
+          <div style="display:flex; align-items:center; gap:8px; flex:1;" onclick="event.stopPropagation()">
+            <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
+                   class="task-desc" style="margin:0; width:100%; max-width:400px; font-size:15px; padding:4px 8px; height:32px;"
+                   onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')">
+            <button class="btn btn-sm btn-primary" style="padding:4px 10px; height:32px;" onclick="saveObjectiveTitle('${compId}','${o.id}')" title="Salvar">✓</button>
+            <button class="btn btn-sm btn-ghost" style="padding:4px 10px; height:32px;" onclick="cancelEditObjective('${o.id}')" title="Cancelar">✕</button>
+          </div>
+        ` : `
+          <div style="display:flex; align-items:center; gap:8px; flex:1;">
+            <h3>${escapeHtml(o.title)}</h3>
+            ${canEditObj ? `<button class="btn btn-sm btn-ghost" style="padding:2px 6px; color:var(--gray-400);" onclick="event.stopPropagation(); startEditObjective('${o.id}')" title="Editar nome">✎</button>` : ''}
+          </div>
+        `}
+
         <div class="meta">
           <span>${allTasks.length} tarefa${allTasks.length!==1?'s':''}</span>
           <span>${done} concluída${done!==1?'s':''}</span>
           ${late ? `<span style="color:#991b1b;font-weight:600">${late} em atraso</span>` : ''}
         </div>
       </div>
-      <div class="objective-savings">
+
+      <div class="objective-savings" style="margin-left: 16px;">
         <div class="label">Economia estimada</div>
         <div class="value">${fmtBRL(o.monthlySavings)}/mês</div>
       </div>
     </div>
+    
     <div class="objective-body">
-      
-      <!-- BLOCO DE EDIÇÃO DE NOME E ECONOMIA -->
-      <div class="savings-edit" style="flex-direction: column; align-items: stretch; gap: 12px;">
-        <div>
-          <label>Nome do Objetivo</label>
-          <input type="text" value="${escapeHtml(o.title)}" ${canEditObj?'':'disabled'} 
-                 onchange="updateObjectiveTitle('${compId}','${o.id}', this.value)" 
-                 style="width:100%; padding:8px 10px; border:1px solid var(--gray-200); border-radius:6px; font-weight:600; color:var(--gray-800); outline:none; margin-top: 4px;">
+      <div class="savings-edit">
+        <label>Estimativa de economia mensal</label>
+        <div class="input-wrap">
+          <span>R$</span>
+          <input type="number" step="0.01" min="0" value="${o.monthlySavings}" ${canEditObj?'':'disabled'}
+                 onchange="updateSavings('${compId}','${o.id}', this.value)">
         </div>
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <label>Estimativa de economia mensal</label>
-          <div class="input-wrap" style="flex: 1; max-width: 220px;">
-            <span>R$</span>
-            <input type="number" step="0.01" min="0" value="${o.monthlySavings}" ${canEditObj?'':'disabled'}
-                   onchange="updateSavings('${compId}','${o.id}', this.value)">
-          </div>
-          ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
-        </div>
+        ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
       </div>
-
       <div class="tasks-header">
         <h4>Tarefas <span class="count">${taskCountText}</span></h4>
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
       </div>
-      
       <div>
         ${filteredTasks.length > 0 
           ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
@@ -154,7 +158,6 @@ function objectiveHTML(o, idx, compId){
              </p>`
         }
       </div>
-
       <div class="objective-totals">
         <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
         <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(totalResult)}</span></div>
@@ -180,6 +183,42 @@ function toggleObjective(id){
       state._openObjectives.push(String(id));
     }
   }
+}
+
+/* --- LÓGICA DE EDIÇÃO DO TÍTULO --- */
+
+function startEditObjective(id) {
+  if (!state._editingObjectives) state._editingObjectives = [];
+  if (!state._editingObjectives.includes(String(id))) {
+    state._editingObjectives.push(String(id));
+  }
+  renderObjectivesListOnly();
+  // Foca o input automaticamente
+  setTimeout(() => document.getElementById(`edit-obj-title-${id}`)?.focus(), 50);
+}
+
+function cancelEditObjective(id) {
+  if (state._editingObjectives) {
+    state._editingObjectives = state._editingObjectives.filter(x => String(x) !== String(id));
+  }
+  renderObjectivesListOnly();
+}
+
+async function saveObjectiveTitle(compId, objId) {
+  const input = document.getElementById(`edit-obj-title-${objId}`);
+  if (!input) return;
+  const newTitle = input.value.trim();
+  
+  if (!newTitle) {
+    showToast("O título não pode ser vazio.", "error");
+    return;
+  }
+  
+  // Atualiza no banco
+  await updateObjectiveTitle(compId, objId, newTitle);
+  
+  // Remove o estado de edição e re-renderiza
+  cancelEditObjective(objId);
 }
 
 function openNewObjectiveModal(){
