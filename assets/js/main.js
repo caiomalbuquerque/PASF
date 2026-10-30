@@ -94,6 +94,8 @@
   }
 })();
 
+let realtimeRenderTimeout;
+
 function initRealtime(){
   // 1. Canal de Notificações
   window.db.channel(`notifs:${state.currentUser.id}`)
@@ -113,40 +115,46 @@ function initRealtime(){
       if (payload.eventType === 'DELETE') return;
       
       const updatedTask = payload.new;
-      const found = findTask(updatedTask.id);
+      let foundAny = false;
       
-      // Log de debug no console de quem está RECEBENDO (o Gestor no Opera Air)
-      console.log("🔔 Realtime no Gestor:", updatedTask.status, "| Tarefa encontrada?", !!found);
-      
-          if (found) {
-        // 1. Acha a posição exata da tarefa no array original para não perder a referência
-        const taskIndex = found.objective.tasks.findIndex(t => String(t.id) === String(updatedTask.id));
-        
-        if (taskIndex !== -1) {
-          // 2. Atualiza o item DIRETO no array do state
-          found.objective.tasks[taskIndex] = {
-            ...found.objective.tasks[taskIndex],
-            ...updatedTask,
-            responsibleId: updatedTask.responsible_id,
-            startDate: updatedTask.start_date,
-            endDate: updatedTask.end_date
-          };
+      // Percorre TODO o state para garantir que o dado foi atualizado em todas as referências
+      Object.keys(state.objectives).forEach(compId => {
+        state.objectives[compId].forEach(obj => {
+          const taskIndex = obj.tasks.findIndex(t => String(t.id) === String(updatedTask.id));
+          
+          if (taskIndex !== -1) {
+            foundAny = true;
+            // Atualiza os dados da tarefa
+            obj.tasks[taskIndex] = {
+              ...obj.tasks[taskIndex],
+              ...updatedTask,
+              responsibleId: updatedTask.responsible_id,
+              startDate: updatedTask.start_date,
+              endDate: updatedTask.end_date
+            };
+            
+            // Reordena o array
+            obj.tasks.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          }
+        });
+      });
 
-          // 3. Reordena o array em memória
-          found.objective.tasks.sort((a, b) => {
-            return (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.created_at) - new Date(b.created_at);
-          });
-        }
-        
-        // 4. Força a atualização da tela atual
-        const activeView = document.querySelector('.nav-item.active')?.dataset.view;
-        if (activeView === 'objetivos') {
-          renderObjectivesListOnly();
-        } else if (activeView === 'dashboard') {
-          renderDashboard();
-        } else if (activeView === 'minhas') {
-          renderMyTasks();
-        }
+      if (foundAny) {
+        // Usa Debounce para não travar o navegador se 6 eventos chegarem juntos
+        clearTimeout(realtimeRenderTimeout);
+        realtimeRenderTimeout = setTimeout(() => {
+          const activeView = document.querySelector('.nav-item.active')?.dataset.view;
+          
+          console.log("🎨 Desenhando tela atualizada para o evento:", updatedTask.id);
+          
+          if (activeView === 'objetivos') {
+            renderObjectivesListOnly();
+          } else if (activeView === 'dashboard') {
+            renderDashboard();
+          } else if (activeView === 'minhas') {
+            renderMyTasks();
+          }
+        }, 150); 
       }
     })
     .subscribe();
