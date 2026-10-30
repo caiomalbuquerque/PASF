@@ -69,19 +69,36 @@ async function markAllRead(){
   $('bellBtn').classList.remove('active');
 }
 
-function openNotif(notifId){
+async function openNotif(notifId){
   const n = state.notifications.find(x => x.id === notifId);
   if(!n) return;
-  n.read = true;
-  saveState();
+
+  // 1. Atualiza no Supabase
+  if (!n.read) {
+    const { error } = await window.db.from('notifications')
+      .update({ is_read: true })
+      .eq('id', notifId);
+      
+    if (error) console.error('Erro ao marcar notificação como lida:', error);
+    
+    // 2. Atualiza o estado local
+    n.read = true;
+  }
+
+  // 3. Atualiza a UI
   renderNotificationsBadge();
   document.querySelector('.notif-panel')?.remove();
   $('bellBtn').classList.remove('active');
+  
+  // 4. Lógica original de abrir a tarefa
   if(n.taskId){
     const found = findTask(n.taskId);
     if(found){
       state.currentCompany = found.compId;
-      $('companySelect').value = found.compId;
+      // Verifica se o seletor de empresa existe (já que ele fica no menu do usuário)
+      const compSelect = $('companySelect');
+      if(compSelect) compSelect.value = found.compId;
+      
       showView('objetivos');
       setTimeout(() => {
         $(`obj-${found.objective.id}`)?.classList.add('open');
