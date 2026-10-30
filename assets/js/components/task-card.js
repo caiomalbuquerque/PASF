@@ -37,7 +37,7 @@ function taskHTML(t, compId, objId){
     <!-- Corpo da Tarefa -->
     <div class="task-body">
       <div class="task-top">
-        <input class="task-desc" value="${escapeHtml(t.description)}" placeholder="O que precisa ser feito?"
+        <input class="task-desc" data-field="description" value="${escapeHtml(t.description)}" placeholder="O que precisa ser feito?"
                ${descEdit && edit ? '' : 'disabled'}
                onchange="updateTask('${compId}','${t.id}','description',this.value)">
       </div>
