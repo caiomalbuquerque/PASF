@@ -59,10 +59,6 @@ function objectiveHTML(o, idx, compId){
   const canEditObj = can('editObj');
   const canAddTask = can('addTask');
 
-  // Encontre:
-  const isOpen = state._openObjectives && state._openObjectives.includes(o.id);
-  
-  // Substitua por:
   const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
 
   return `
