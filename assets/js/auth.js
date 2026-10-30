@@ -22,68 +22,55 @@ async function handleLogin(e){
     return;
   }
 
-  // 2. Busca o perfil na tabela profiles
-  const { data: profile, error: profileError } = await window.db
-    .from('profiles')
-    .select('*')
-    .eq('id', authData.user.id)
-    .single();
-
-  if (profileError || !profile) {
-    console.error("Erro detalhado do Supabase:", profileError);
-    err.textContent = `Erro: ${profileError?.message || 'Perfil não encontrado'}`;
-    err.classList.remove('hidden');
-    await window.db.auth.signOut();
-    btn.textContent = 'Entrar';
-    btn.disabled = false;
-    return;
-  }
-
-  // 3. Mapeia os dados (snake_case do banco para camelCase do frontend)
-  const formattedProfile = {
-    ...profile,
-    companyId: profile.company_id,
-    gestorId: profile.manager_id
-  };
-
-  // 4. Salva na sessão e redireciona
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(formattedProfile));
+  // A sessão já é salva automaticamente pelo Supabase no localStorage.
+  // Apenas redireciona para o app.
   window.location.href = 'app.html';
 }
 
 async function logout(){
   await window.db.auth.signOut();
-  sessionStorage.removeItem(SESSION_KEY);
   window.location.href = 'index.html';
 }
 
-function currentSessionUser(){
-  const data = sessionStorage.getItem(SESSION_KEY);
-  return data ? JSON.parse(data) : null;
-}
-
 async function requireAuth(){
-  const sessionUser = currentSessionUser();
-  if(!sessionUser){ 
-    window.location.href = 'index.html'; 
-    return null; 
-  }
+  // 1. Verifica se existe uma sessão ativa no Supabase
+  const { data: { session }, error } = await window.db.auth.getSession();
   
-  const { data: { session } } = await window.db.auth.getSession();
-  if (!session) {
-    sessionStorage.removeItem(SESSION_KEY);
+  if (error || !session) {
     window.location.href = 'index.html';
     return null;
   }
-  
-  return sessionUser;
+
+  // 2. Busca os dados do perfil em tempo real no banco de dados
+  const { data: profile, error: profileError } = await window.db
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    console.error("Erro ao buscar perfil:", profileError);
+    await window.db.auth.signOut();
+    window.location.href = 'index.html';
+    return null;
+  }
+
+  // 3. Mapeia e retorna os dados sempre atualizados
+  return {
+    ...profile,
+    companyId: profile.company_id,
+    gestorId: profile.manager_id
+  };
 }
 
-function bootLoginPage(){
-  if(currentSessionUser()){
+async function bootLoginPage(){
+  // Se o usuário já tem uma sessão válida, pula a tela de login
+  const { data: { session } } = await window.db.auth.getSession();
+  if(session){
     window.location.href = 'app.html';
     return;
   }
+  
   $('loginForm').addEventListener('submit', handleLogin);
   
   const demoGrid = $('demoGrid');
