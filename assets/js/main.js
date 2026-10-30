@@ -116,6 +116,26 @@ function initRealtime(){
       
       const updatedTask = payload.new;
       let foundAny = false;
+
+    // 3. Canal de Objetivos (Sincronização do Título)
+  window.db.channel('objectives_realtime')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'objectives' }, payload => {
+      const updatedObj = payload.new;
+      
+      Object.keys(state.objectives).forEach(compId => {
+        const objIndex = state.objectives[compId].findIndex(o => String(o.id) === String(updatedObj.id));
+        if (objIndex !== -1) {
+          state.objectives[compId][objIndex].title = updatedObj.title;
+          state.objectives[compId][objIndex].monthlySavings = updatedObj.monthly_savings;
+          
+          clearTimeout(window.realtimeObjTimeout);
+          window.realtimeObjTimeout = setTimeout(() => {
+            renderObjectivesListOnly();
+          }, 150);
+        }
+      });
+    })
+    .subscribe();
       
       // Percorre TODO o state para garantir que o dado foi atualizado em todas as referências
       Object.keys(state.objectives).forEach(compId => {
