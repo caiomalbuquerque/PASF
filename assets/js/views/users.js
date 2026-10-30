@@ -115,13 +115,31 @@ async function submitNewUser(btn){
 
   btn.textContent = 'Criando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  const tempSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Cria um cliente temporário que NÃO salva a sessão no localStorage
+  const tempSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { 
+      persistSession: false, 
+      autoRefreshToken: false, 
+      detectSessionInUrl: false 
+    }
+  });
+
   const { data, error } = await tempSupabase.auth.signUp({
     email, password: pass,
     options: { data: { name, role, company_id, manager_id } }
   });
 
-  if (error) { errDiv.textContent = error.message; errDiv.classList.remove('hidden'); btn.textContent = 'Criar'; btn.disabled = false; return; }
+  if (error) { 
+    errDiv.textContent = error.message; 
+    errDiv.classList.remove('hidden'); 
+    btn.textContent = 'Criar'; btn.disabled = false; 
+    return; 
+  }
+
+  // Verifica se o Supabase exigiu confirmação de e-mail
+  if (data.user && !data.session) {
+    console.warn("O usuário foi criado, mas o Supabase exigiu confirmação de e-mail.");
+  }
 
   btn.closest('.modal-overlay').remove();
   alert(`Usuário ${name} criado!\nSenha provisória: ${pass}`);
