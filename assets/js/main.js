@@ -73,7 +73,6 @@
     
     renderSidebar();
     renderTopbar();
-    renderCompanySelector();
     renderNotificationsBadge();
     initRealtime(); 
     
