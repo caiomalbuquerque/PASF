@@ -78,7 +78,10 @@ async function updateTask(compId, taskId, field, value){
       new_value: String(value || '')
     }]).select().single();
   
-    if (!logErr && logData) {
+    if (logErr) {
+      // MUDANÇA AQUI: agora o erro aparece no console em vermelho
+      console.error('❌ Erro do Supabase ao salvar log:', logErr);
+    } else if (logData) {
       state.auditLog.push({
         id: logData.id,
         taskId: logData.task_id,
@@ -86,7 +89,7 @@ async function updateTask(compId, taskId, field, value){
         field: logData.field_changed,
         oldValue: logData.old_value,
         newValue: logData.new_value,
-        timestamp: logData.created_at
+        timestamp: logData.created_at || new Date().toISOString() // fallback se created_at faltar
       });
     }
   }
