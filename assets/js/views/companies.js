@@ -25,7 +25,7 @@ function renderCompanies(){
             <h3>${c.name}</h3>
             ${can('manageUsers') ? `<button class="btn btn-sm btn-ghost" style="padding:2px 6px" onclick="openEditCompanyModal(${c.id})">✎</button>` : ''}
           </div>
-          <p>${c.cnpj || 'CNPJ não informado'} ${isInactive ? '• <strong>(Inativa)</strong>' : ''}</p>
+          <p>ID: <strong>${c.id}</strong> ${isInactive ? '• <span style="color:var(--danger);font-weight:600">(Inativa)</span>' : ''}</p>
           <div class="stats">
             <div><span class="v">${objs.length}</span><span class="l">Objetivos</span></div>
             <div><span class="v">${uCount}</span><span class="l">Usuários</span></div>
@@ -46,11 +46,11 @@ function openEditCompanyModal(companyId) {
       <button onclick="this.closest('.modal-overlay').remove()">✕</button>
     </div>
     <div class="modal-body">
+      <label>ID da Empresa (Não editável)</label>
+      <input value="${c.id}" disabled style="opacity:0.6;background:var(--gray-100)">
+      
       <label>Nome da Empresa</label>
       <input id="editCompName" value="${escapeHtml(c.name)}" required>
-      
-      <label>CNPJ</label>
-      <input id="editCompCnpj" value="${escapeHtml(c.cnpj || '')}">
       
       <label style="display:flex;align-items:center;gap:8px;margin-top:20px;cursor:pointer">
         <input type="checkbox" id="editCompActive" ${c.is_active !== false ? 'checked' : ''} style="width:auto;margin:0">
@@ -68,7 +68,6 @@ function openEditCompanyModal(companyId) {
 
 async function submitEditCompany(companyId, btn) {
   const name = $('editCompName').value.trim();
-  const cnpj = $('editCompCnpj').value.trim();
   const is_active = $('editCompActive').checked;
   const errDiv = $('editCompError');
 
@@ -76,23 +75,31 @@ async function submitEditCompany(companyId, btn) {
 
   btn.textContent = 'Salvando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  const { error } = await window.db.from('companies').update({
-    name, cnpj, is_active
-  }).eq('id', companyId);
+  // O .select().single() garante que o banco confirme a alteração da linha
+  const { data, error } = await window.db.from('companies').update({
+    name, is_active
+  }).eq('id', companyId).select().single();
 
   if(error) { 
-    errDiv.textContent = error.message; 
+    errDiv.textContent = "Erro no banco: " + error.message; 
     errDiv.classList.remove('hidden'); 
     btn.textContent = 'Salvar'; btn.disabled = false; 
     return; 
   }
 
+  if(!data) {
+    errDiv.textContent = "A alteração não foi permitida pelo banco (RLS).";
+    errDiv.classList.remove('hidden');
+    btn.textContent = 'Salvar'; btn.disabled = false;
+    return;
+  }
+
   // Atualiza o state local
   const compIndex = state.companies.findIndex(x => x.id === companyId);
   if(compIndex > -1) {
-    state.companies[compIndex] = { ...state.companies[compIndex], name, cnpj, is_active };
+    state.companies[compIndex] = { ...state.companies[compIndex], name, is_active };
   }
 
   btn.closest('.modal-overlay').remove();
-  renderCompanies();
+  renderCompanies(); // Redesenha a lista na hora
 }
