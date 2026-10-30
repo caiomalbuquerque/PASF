@@ -20,6 +20,9 @@
     const { data: tasks, error: errTasks } = await window.db.from('tasks').select('*');
     if (errTasks) throw new Error(`Erro em Tarefas: ${errTasks.message}`);
 
+    const { data: attachments, error: errAtt } = await window.db.from('task_attachments').select('*');
+    if (errAtt) throw new Error(`Erro em Anexos: ${errAtt.message}`);
+
     const { data: notifications, error: errNotif } = await window.db.from('notifications')
       .select('*')
       .eq('user_id', user.id)
@@ -70,16 +73,24 @@
       if (!state.objectives[obj.company_id]) state.objectives[obj.company_id] = [];
       
       // ORDENAÇÃO AQUI: Pega as tarefas, ordena pelo sort_order e depois por data
+      // ORDENAÇÃO AQUI: Pega as tarefas, ordena pelo sort_order e depois por data
       const objTasks = (tasks || [])
         .filter(t => t.objective_id === obj.id)
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.created_at) - new Date(b.created_at))
-        .map(t => ({
-          ...t, 
-          responsibleId: t.responsible_id, 
-          startDate: t.start_date, 
-          endDate: t.end_date,
-          attachments: []
-        }));
+        .map(t => {
+          // Busca os anexos desta tarefa específica
+          const taskAtts = (attachments || [])
+            .filter(a => a.task_id === t.id)
+            .map(a => ({ id: a.id, name: a.file_name, path: a.file_path }));
+
+          return {
+            ...t, 
+            responsibleId: t.responsible_id, 
+            startDate: t.start_date, 
+            endDate: t.end_date,
+            attachments: taskAtts // Agora ele puxa os anexos reais
+          };
+        });
       
       state.objectives[obj.company_id].push({
         ...obj, monthlySavings: obj.monthly_savings, tasks: objTasks
