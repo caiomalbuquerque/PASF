@@ -94,19 +94,24 @@ async function updateTask(compId, taskId, field, value){
     }
   }
 
+  // Notifica o gestor
   if(state.currentUser.gestorId && state.currentUser.gestorId !== state.currentUser.id){
-    await window.db.from('notifications').insert([{
+    const { error: notifErr } = await window.db.from('notifications').insert([{
       user_id: state.currentUser.gestorId,
       message: `${state.currentUser.name} atualizou "${FIELD_LABELS[field]||field}" da tarefa "${found.task.description || '(sem descrição)'}"`,
       task_id: taskId
     }]);
+    if (notifErr) console.error('❌ Erro ao notificar gestor:', notifErr);
   }
+
+  // Notifica o novo responsável
   if(field === 'responsibleId' && value !== state.currentUser.id){
-    await window.db.from('notifications').insert([{
+    const { error: notifErr } = await window.db.from('notifications').insert([{
       user_id: value,
       message: `Você foi atribuído(a) à tarefa "${found.task.description || '(sem descrição)'}"`,
       task_id: taskId
     }]);
+    if (notifErr) console.error('❌ Erro ao notificar responsável:', notifErr);
   }
 
   // Atualiza o nome da tarefa na capa (quando fechada)
