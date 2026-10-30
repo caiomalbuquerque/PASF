@@ -94,7 +94,6 @@
   }
 })();
 
-/* Realtime - Notificações e Tarefas */
 function initRealtime(){
   // 1. Canal de Notificações
   window.db.channel(`notifs:${state.currentUser.id}`)
@@ -109,18 +108,18 @@ function initRealtime(){
     .subscribe();
 
   // 2. Canal de Tarefas (Sincronização em Tempo Real)
-  console.log("🔌 Iniciando Realtime de Tarefas...");
-  
   window.db.channel('tasks_realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
-      console.log("🔔 Realtime: Evento recebido do banco!", payload);
-      
-      if (payload.eventType === 'DELETE') return; // Ignora deleções por enquanto
+      if (payload.eventType === 'DELETE') return;
       
       const updatedTask = payload.new;
       const found = findTask(updatedTask.id);
       
+      // Log de debug no console de quem está RECEBENDO (o Gestor no Opera Air)
+      console.log("🔔 Realtime no Gestor:", updatedTask.status, "| Tarefa encontrada?", !!found);
+      
       if (found) {
+        // Atualiza o state local com os dados novos que chegaram do banco
         found.task = {
           ...found.task,
           ...updatedTask,
@@ -129,19 +128,18 @@ function initRealtime(){
           endDate: updatedTask.end_date
         };
         
-        // Atualiza a tela que o usuário está vendo no momento
+        // Descobre qual tela o Gestor está vendo agora
         const activeView = document.querySelector('.nav-item.active')?.dataset.view;
         
-        if (activeView === 'objetivos' || activeView === 'dashboard') {
-          refreshObjectiveDOM(found.objective.id, found.compId);
-          if (typeof renderObjectivesListOnly === 'function') renderObjectivesListOnly();
-          if (activeView === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
-        } else if (activeView === 'minhas' && typeof renderMyTasks === 'function') {
+        // Força a atualização da tela
+        if (activeView === 'objetivos') {
+          renderObjectivesListOnly();
+        } else if (activeView === 'dashboard') {
+          renderDashboard();
+        } else if (activeView === 'minhas') {
           renderMyTasks();
         }
       }
     })
-    .subscribe((status) => {
-      console.log("📡 Status do Canal Tarefas:", status); // Deve imprimir "SUBSCRIBED"
-    });
+    .subscribe();
 }
