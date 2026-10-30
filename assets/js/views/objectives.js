@@ -1,26 +1,58 @@
 function renderObjectives(){
   const el = $('view-objetivos');
   const isGlobal = can('scope') === 'all';
-  const comps = isGlobal ? accessibleCompanies() : [companyById(state.currentCompany)].filter(Boolean);
-
-  let header = `
-    <div class="page-header">
-      <div>
-        <h1>Objetivos do plano de ação</h1>
-        <p>${isGlobal
-          ? 'Visão consolidada de todas as empresas.'
-          : 'Cada linha representa um objetivo. Clique para expandir e gerenciar as tarefas (5W2H).'}</p>
+  
+  // Cria a estrutura base do cabeçalho APENAS UMA VEZ
+  if (!el.querySelector('#obj-header-container')) {
+    let headerHTML = `
+      <div id="obj-header-container">
+        <div class="page-header">
+          <div>
+            <h1>Objetivos do plano de ação</h1>
+            <p>${isGlobal
+              ? 'Visão consolidada de todas as empresas.'
+              : 'Cada linha representa um objetivo. Clique para expandir e gerenciar as tarefas (5W2H).'}</p>
+          </div>
+          ${can('createObj') ? `<button class="btn btn-primary" onclick="openNewObjectiveModal()">+ Novo objetivo</button>` : ''}
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="searchObj" placeholder="Buscar objetivo..." value="${escapeHtml(state._objSearch||'')}">
+          <select id="filterStatus">
+            <option value="">Todos os status</option>
+            ${ALL_STATUS.map(s => `<option ${state._objStatus===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
       </div>
-      ${can('createObj') ? `<button class="btn btn-primary" onclick="openNewObjectiveModal()">+ Novo objetivo</button>` : ''}
-    </div>
-    <div class="filter-bar">
-      <input type="text" id="searchObj" placeholder="Buscar objetivo..." value="${escapeHtml(state._objSearch||'')}">
-      <select id="filterStatus">
-        <option value="">Todos os status</option>
-        ${ALL_STATUS.map(s => `<option ${state._objStatus===s?'selected':''}>${s}</option>`).join('')}
-      </select>
-    </div>`;
+      <div id="obj-list-container"></div>
+    `;
+    el.innerHTML = headerHTML;
 
+    // Eventos escutam e atualizam APENAS a lista, mantendo o foco no input
+    $('searchObj')?.addEventListener('input', e => { 
+      state._objSearch = e.target.value; 
+      renderObjectivesListOnly(); 
+    });
+    $('filterStatus')?.addEventListener('change', e => { 
+      state._objStatus = e.target.value; 
+      renderObjectivesListOnly(); 
+    });
+  } else {
+    // Se a estrutura já existe, apenas sincroniza o valor da busca (caso mude por fora)
+    const searchInput = $('searchObj');
+    if(searchInput && searchInput.value !== (state._objSearch || '')){
+       searchInput.value = state._objSearch || '';
+    }
+  }
+
+  renderObjectivesListOnly();
+}
+
+function renderObjectivesListOnly(){
+  const elList = $('obj-list-container');
+  if(!elList) return;
+
+  const isGlobal = can('scope') === 'all';
+  const comps = isGlobal ? accessibleCompanies() : [companyById(state.currentCompany)].filter(Boolean);
   const search = (state._objSearch||'').toLowerCase();
   const fStatus = state._objStatus || '';
 
@@ -44,9 +76,7 @@ function renderObjectives(){
     if(isGlobal) body += `</div>`;
   });
 
-  el.innerHTML = header + body;
-  $('searchObj')?.addEventListener('input', e => { state._objSearch = e.target.value; renderObjectives(); });
-  $('filterStatus')?.addEventListener('change', e => { state._objStatus = e.target.value; renderObjectives(); });
+  elList.innerHTML = body;
 }
 
 function objectiveHTML(o, idx, compId){
