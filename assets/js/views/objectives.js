@@ -91,6 +91,16 @@ function objectiveHTML(o, idx, compId){
 
   const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
 
+  // NOVO: Filtra as tarefas internas com base no status selecionado no topo da página
+  const filteredTasks = state._objStatus 
+    ? allTasks.filter(t => effectiveStatus(t) === state._objStatus)
+    : allTasks;
+
+  // Texto do contador de tarefas
+  const taskCountText = filteredTasks.length !== allTasks.length 
+    ? `${filteredTasks.length} de ${allTasks.length}` 
+    : `${allTasks.length}`;
+
   return `
   <div class="objective-card ${isOpen ? 'open' : ''}" id="obj-${o.id}" data-id="${o.id}">
     <div class="objective-header" onclick="toggleObjective('${o.id}')">
@@ -120,10 +130,20 @@ function objectiveHTML(o, idx, compId){
         ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
       </div>
       <div class="tasks-header">
-        <h4>Tarefas <span class="count">${allTasks.length}</span></h4>
+        <h4>Tarefas <span class="count">${taskCountText}</span></h4>
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
       </div>
-      <div>${allTasks.map(t => taskHTML(t, compId, o.id)).join('') || '<p style="color:var(--gray-500);font-size:12px;padding:8px 0">Nenhuma tarefa cadastrada.</p>'}</div>
+      
+      <!-- AQUI: Renderiza as tarefas filtradas. Se o filtro esconder tudo, mostra um aviso. -->
+      <div>
+        ${filteredTasks.length > 0 
+          ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
+          : `<p style="color:var(--gray-500);font-size:12px;padding:12px;background:var(--gray-100);border-radius:6px;text-align:center">
+              Nenhuma tarefa encontrada ${state._objStatus ? `com o status <strong>${state._objStatus}</strong>` : 'cadastrada'}.
+             </p>`
+        }
+      </div>
+
       <div class="objective-totals">
         <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
         <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(totalResult)}</span></div>
