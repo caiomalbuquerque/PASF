@@ -9,6 +9,27 @@ async function updateSavings(compId, objId, value){
   renderObjectivesListOnly();
 }
 
+async function updateObjectiveTitle(compId, objId, value){
+  const title = value.trim();
+  if(!title) {
+    showToast("O título não pode ser vazio.", "error");
+    renderObjectivesListOnly(); // Reseta o campo para o valor original
+    return;
+  }
+
+  const { error } = await window.db.from('objectives').update({ title: title }).eq('id', objId);
+  if (error) { 
+    showToast("Erro ao salvar nome do objetivo: " + error.message, "error"); 
+    return; 
+  }
+  
+  const o = (state.objectives[compId]||[]).find(x => x.id === objId);
+  if(o) o.title = title;
+  
+  renderObjectivesListOnly();
+  showToast("Nome do objetivo atualizado!", "success");
+}
+
 async function deleteObjective(compId, objId){
   if(!confirm('Remover este objetivo e todas as suas tarefas?')) return;
   const { error } = await window.db.from('objectives').delete().eq('id', objId);
