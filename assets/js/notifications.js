@@ -48,22 +48,17 @@ function toggleNotifications(ev){
 }
 
 async function markAllRead(){
-  // 1. Atualiza no Supabase todas as notificações não lidas deste usuário
   const { error } = await window.db.from('notifications')
     .update({ is_read: true })
     .eq('user_id', state.currentUser.id)
     .eq('is_read', false);
 
-  if (error) {
-    console.error('Erro ao marcar todas como lidas no banco:', error);
-  }
+  if (error) console.error('Erro ao marcar todas como lidas no banco:', error);
 
-  // 2. Atualiza o estado local
   state.notifications.forEach(n => { 
     if(n.userId === state.currentUser.id) n.read = true; 
   });
   
-  // 3. Atualiza a UI
   renderNotificationsBadge();
   document.querySelector('.notif-panel')?.remove();
   $('bellBtn').classList.remove('active');
@@ -73,24 +68,19 @@ async function openNotif(notifId){
   const n = state.notifications.find(x => x.id === notifId);
   if(!n) return;
 
-  // 1. Atualiza no Supabase
   if (!n.read) {
     const { error } = await window.db.from('notifications')
       .update({ is_read: true })
       .eq('id', notifId);
       
     if (error) console.error('Erro ao marcar notificação como lida:', error);
-    
-    // 2. Atualiza o estado local
     n.read = true;
   }
 
-  // 3. Atualiza a UI
   renderNotificationsBadge();
   document.querySelector('.notif-panel')?.remove();
   $('bellBtn').classList.remove('active');
   
-  // 4. Navega até a tarefa
   if(n.taskId){
     const found = findTask(n.taskId);
     if(found){
@@ -101,18 +91,14 @@ async function openNotif(notifId){
       showView('objetivos');
 
       setTimeout(() => {
-        // Abre o objetivo se estiver fechado
         const objEl = $(`obj-${found.objective.id}`);
         if(objEl && !objEl.classList.contains('open')) toggleObjective(found.objective.id);
 
-        // Abre a tarefa se estiver fechada
         const taskEl = $(`task-${n.taskId}`);
         if(taskEl && !taskEl.classList.contains('open')) toggleTask(n.taskId);
 
-        // Rola a tela até a tarefa
         taskEl?.scrollIntoView({behavior:'smooth', block:'center'});
 
-        // Foca e destaca o campo específico
         if (n.targetField) {
           setTimeout(() => {
             const targetInput = taskEl.querySelector(`[data-field="${n.targetField}"]`);
@@ -121,7 +107,7 @@ async function openNotif(notifId){
               targetInput.classList.add('pulse-highlight');
               setTimeout(() => targetInput.classList.remove('pulse-highlight'), 3500);
             }
-          }, 350); // espera a animação da sanfona abrir
+          }, 350);
         }
       }, 100);
     }
