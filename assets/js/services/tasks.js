@@ -13,7 +13,8 @@ function effectiveStatus(task){
 function findTask(taskId){
   for(const compId in state.objectives){
     for(const o of state.objectives[compId]){
-      const t = o.tasks.find(x => x.id === taskId);
+      // MUDANÇA: Força a comparação de string para não falhar com UUIDs
+      const t = o.tasks.find(x => String(x.id) === String(taskId));
       if(t) return { compId, objective:o, task:t };
     }
   }
