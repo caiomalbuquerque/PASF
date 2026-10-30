@@ -30,34 +30,27 @@
         </div>
       </div>
       <nav class="sidebar-nav" id="sidebarNav"></nav>
-      <div class="sidebar-footer">
-        <div class="sidebar-user">
-          <div class="avatar" id="sideAvatar">?</div>
-          <div>
-            <strong id="sideName">—</strong>
-            <small id="sideRole">—</small>
-          </div>
-        </div>
-        <button class="logout-btn" onclick="logout()">↩ Sair</button>
-      </div>
+      <!-- O rodapé com o usuário foi removido daqui -->
     </aside>
 
     <div class="main-wrapper">
       <header class="topbar">
-        <div class="company-selector">
-          <span class="dot"></span>
-          <select id="companySelect"></select>
-        </div>
+        
+        <!-- O seletor de empresas foi removido daqui, agora fica no menu do usuário -->
+        
         <div class="topbar-actions">
           <button class="icon-btn" id="bellBtn" title="Notificações" onclick="toggleNotifications(event)">
             ◔<span class="badge hidden" id="bellBadge">0</span>
           </button>
-          <div class="topbar-user">
+          
+          <!-- Área do Usuário (Clicável) -->
+          <div class="topbar-user" id="userMenuBtn" onclick="toggleUserMenu(event)" style="cursor:pointer">
             <div class="avatar" id="topAvatar">?</div>
             <div>
               <div class="name" id="topName">— <span class="role-badge" id="topRole">—</span></div>
               <div class="role" id="topCompany">—</div>
             </div>
+            <span style="font-size:10px;color:var(--gray-400);margin-left:4px">▼</span>
           </div>
         </div>
       </header>
