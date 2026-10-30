@@ -26,6 +26,11 @@
       .order('created_at', {ascending:false});
     if (errNotif) throw new Error(`Erro em Notificações: ${errNotif.message}`);
 
+    const { data: auditLogs, error: errAudit } = await window.db.from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (errAudit) throw new Error(`Erro em Audit Logs: ${errAudit.message}`);
+
     // Reconstrói o estado em memória mapeando snake_case -> camelCase
     state.companies = companies || [];
     
@@ -105,8 +110,4 @@ function initRealtime(){
     })
     .subscribe();
 
-  const { data: auditLogs, error: errAudit } = await window.db.from('audit_logs')
-  .select('*')
-  .order('created_at', { ascending: true });
-if (errAudit) throw new Error(`Erro em Audit Logs: ${errAudit.message}`);
 }
