@@ -36,7 +36,7 @@ function taskHTML(t, compId, objId){
     </div>
 
     <!-- Corpo da Tarefa -->
-    <div class="task-body">
+    <div class="task-body" onmousedown="this.closest('.task-card').draggable=false" onmouseup="this.closest('.task-card').draggable=true">
       <div class="task-top">
         <input class="task-desc" data-field="description" value="${escapeHtml(t.description)}" placeholder="O que precisa ser feito?"
                ${descEdit && edit ? '' : 'disabled'}
@@ -46,7 +46,7 @@ function taskHTML(t, compId, objId){
         <div class="task-field">
           <label>Responsável</label>
           <select data-field="responsibleId" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','responsibleId',this.value)">
-            ${users.map(u => `<option value="${u.id}" ${u.id===t.responsibleId?'selected':''}>${u.name}</option>`).join('')}
+            ${users.map(u => `<option value="${u.id}" ${u.id===t.responsibleId?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
           </select>
         </div>
         <div class="task-field">
@@ -84,7 +84,7 @@ function taskHTML(t, compId, objId){
               📄 ${escapeHtml(a.name)}
               ${edit ? `<button onclick="event.stopPropagation(); removeAttachment('${compId}','${t.id}','${a.id}')">×</button>` : ''}
             </span>`).join('')}
-          ${(t.attachments||[]).length === 0 ? '<span style="font-size:11px;color:var(--gray-400)">nenhum</span>' : ''}
+          ${(t.attachments||[]).length === 0 ? '<span style="font-size:12px;color:var(--gray-400)">nenhum</span>' : ''}
           ${edit ? `
             <label class="btn btn-sm btn-ghost" style="margin-left:auto;padding:4px 10px;font-size:11px;cursor:pointer">
               + Anexar arquivo
