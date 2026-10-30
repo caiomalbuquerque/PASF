@@ -95,5 +95,4 @@ async function submitEditCompany(companyId, btn) {
 
   btn.closest('.modal-overlay').remove();
   renderCompanies();
-  renderCompanySelector(); // Atualiza o dropdown do topo
 }
