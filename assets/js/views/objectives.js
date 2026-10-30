@@ -1,3 +1,5 @@
+/* assets/js/views/objectives.js */
+
 function renderObjectives(){
   const el = $('view-objetivos');
   const isGlobal = can('scope') === 'all';
@@ -27,7 +29,6 @@ function renderObjectives(){
     `;
     el.innerHTML = headerHTML;
 
-    // Eventos escutam e atualizam APENAS a lista, mantendo o foco no input
     $('searchObj')?.addEventListener('input', e => { 
       state._objSearch = e.target.value; 
       renderObjectivesListOnly(); 
@@ -37,7 +38,6 @@ function renderObjectives(){
       renderObjectivesListOnly(); 
     });
   } else {
-    // Se a estrutura já existe, apenas sincroniza o valor da busca (caso mude por fora)
     const searchInput = $('searchObj');
     if(searchInput && searchInput.value !== (state._objSearch || '')){
        searchInput.value = state._objSearch || '';
@@ -60,6 +60,8 @@ function renderObjectivesListOnly(){
   comps.forEach(comp => {
     let objs = state.objectives[comp.id] || [];
     if(search) objs = objs.filter(o => o.title.toLowerCase().includes(search));
+    
+    // Filtra objetivos que contenham a tarefa com o status desejado
     if(fStatus) objs = objs.filter(o => o.tasks.some(t => effectiveStatus(t) === fStatus));
 
     if(isGlobal){
@@ -91,12 +93,11 @@ function objectiveHTML(o, idx, compId){
 
   const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
 
-  // NOVO: Filtra as tarefas internas com base no status selecionado no topo da página
+  // Filtra as tarefas internas com base no status selecionado no topo da página
   const filteredTasks = state._objStatus 
     ? allTasks.filter(t => effectiveStatus(t) === state._objStatus)
     : allTasks;
 
-  // Texto do contador de tarefas
   const taskCountText = filteredTasks.length !== allTasks.length 
     ? `${filteredTasks.length} de ${allTasks.length}` 
     : `${allTasks.length}`;
@@ -134,7 +135,6 @@ function objectiveHTML(o, idx, compId){
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
       </div>
       
-      <!-- AQUI: Renderiza as tarefas filtradas. Se o filtro esconder tudo, mostra um aviso. -->
       <div>
         ${filteredTasks.length > 0 
           ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
