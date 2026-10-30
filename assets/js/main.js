@@ -118,20 +118,28 @@ function initRealtime(){
       // Log de debug no console de quem está RECEBENDO (o Gestor no Opera Air)
       console.log("🔔 Realtime no Gestor:", updatedTask.status, "| Tarefa encontrada?", !!found);
       
-      if (found) {
-        // Atualiza o state local com os dados novos que chegaram do banco
-        found.task = {
-          ...found.task,
-          ...updatedTask,
-          responsibleId: updatedTask.responsible_id,
-          startDate: updatedTask.start_date,
-          endDate: updatedTask.end_date
-        };
+          if (found) {
+        // 1. Acha a posição exata da tarefa no array original para não perder a referência
+        const taskIndex = found.objective.tasks.findIndex(t => String(t.id) === String(updatedTask.id));
         
-        // Descobre qual tela o Gestor está vendo agora
+        if (taskIndex !== -1) {
+          // 2. Atualiza o item DIRETO no array do state
+          found.objective.tasks[taskIndex] = {
+            ...found.objective.tasks[taskIndex],
+            ...updatedTask,
+            responsibleId: updatedTask.responsible_id,
+            startDate: updatedTask.start_date,
+            endDate: updatedTask.end_date
+          };
+
+          // 3. Reordena o array em memória
+          found.objective.tasks.sort((a, b) => {
+            return (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.created_at) - new Date(b.created_at);
+          });
+        }
+        
+        // 4. Força a atualização da tela atual
         const activeView = document.querySelector('.nav-item.active')?.dataset.view;
-        
-        // Força a atualização da tela
         if (activeView === 'objetivos') {
           renderObjectivesListOnly();
         } else if (activeView === 'dashboard') {
