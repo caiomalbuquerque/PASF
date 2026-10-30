@@ -9,7 +9,8 @@ function taskHTML(t, compId, objId){
   const eff = effectiveStatus(t);
   const autoLate = eff === 'Atrasada' && t.status !== 'Atrasada';
   
-  const isOpen = state._openTasks && state._openTasks.includes(t.id);
+  const isOpen = state._openTasks && state._openTasks.includes(String(t.id));
+
   const descText = t.description || '(Nova tarefa sem descrição)';
 
   return `
