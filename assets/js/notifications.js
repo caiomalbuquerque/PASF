@@ -90,6 +90,49 @@ async function openNotif(notifId){
   document.querySelector('.notif-panel')?.remove();
   $('bellBtn').classList.remove('active');
   
+  // 4. Navega até a tarefa
+  if(n.taskId){
+    const found = findTask(n.taskId);
+    if(found){
+      state.currentCompany = found.compId;
+      const compSelect = $('companySelect');
+      if(compSelect) compSelect.value = found.compId;
+      
+      showView('objetivos');
+
+      setTimeout(() => {
+        // Abre o objetivo se estiver fechado
+        const objEl = $(`obj-${found.objective.id}`);
+        if(objEl && !objEl.classList.contains('open')) toggleObjective(found.objective.id);
+
+        // Abre a tarefa se estiver fechada
+        const taskEl = $(`task-${n.taskId}`);
+        if(taskEl && !taskEl.classList.contains('open')) toggleTask(n.taskId);
+
+        // Rola a tela até a tarefa
+        taskEl?.scrollIntoView({behavior:'smooth', block:'center'});
+
+        // Foca e destaca o campo específico
+        if (n.targetField) {
+          setTimeout(() => {
+            const targetInput = taskEl.querySelector(`[data-field="${n.targetField}"]`);
+            if (targetInput) {
+              targetInput.focus();
+              targetInput.classList.add('pulse-highlight');
+              setTimeout(() => targetInput.classList.remove('pulse-highlight'), 3500);
+            }
+          }, 350); // espera a animação da sanfona abrir
+        }
+      }, 100);
+    }
+  }
+}
+
+  // 3. Atualiza a UI
+  renderNotificationsBadge();
+  document.querySelector('.notif-panel')?.remove();
+  $('bellBtn').classList.remove('active');
+  
   // 4. Lógica original de abrir a tarefa
   if(n.taskId){
     const found = findTask(n.taskId);
