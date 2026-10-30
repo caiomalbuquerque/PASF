@@ -57,7 +57,15 @@ function renderObjectivesListOnly(){
 
   let body = '';
   comps.forEach(comp => {
-    let objs = state.objectives[comp.id] || [];
+    let objs = [...(state.objectives[comp.id] || [])];
+    
+    // Ordena sempre pela data de criação (ou ID, se created_at não existir)
+    objs.sort((a, b) => {
+      if (a.created_at && b.created_at) {
+        return new Date(a.created_at) - new Date(b.created_at);
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
     if(search) objs = objs.filter(o => o.title.toLowerCase().includes(search));
     if(fStatus) objs = objs.filter(o => o.tasks.some(t => effectiveStatus(t) === fStatus));
 
