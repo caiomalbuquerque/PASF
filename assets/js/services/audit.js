@@ -1,4 +1,5 @@
-function logChange(taskId, field, oldValue, newValue){
+/* @deprecated — lógica substituída por updateTask em services/tasks.js */
+function logChange(){ /* noop */ }
   state.auditLog.push({
     id: uid(), taskId, field, oldValue, newValue,
     userId: state.currentUser.id, timestamp: nowIso()
