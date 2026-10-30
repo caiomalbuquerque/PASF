@@ -80,8 +80,9 @@ function taskHTML(t, compId, objId){
         <div class="attach-row">
           <span class="attach-label">📎 Anexos:</span>
           ${(t.attachments||[]).map(a =>
-            `<span class="attach-item">📄 ${escapeHtml(a.name)}
-              ${edit ? `<button onclick="removeAttachment('${compId}','${t.id}','${a.id}')">×</button>` : ''}
+            `<span class="attach-item" style="cursor:pointer; transition:var(--transition)" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'" onclick="openAttachment('${a.path}')" title="Clique para abrir/baixar">
+              📄 ${escapeHtml(a.name)}
+              ${edit ? `<button onclick="event.stopPropagation(); removeAttachment('${compId}','${t.id}','${a.id}')">×</button>` : ''}
             </span>`).join('')}
           ${(t.attachments||[]).length === 0 ? '<span style="font-size:11px;color:var(--gray-400)">nenhum</span>' : ''}
           ${edit ? `
