@@ -6,13 +6,10 @@ function renderUsers(){
       Você não tem permissão para acessar esta área.</div></div>`;
     return;
   }
-// ... (início da função renderUsers)
+
   const scopeAll = can('scope') === 'all';
   let list = scopeAll ? state.users : state.users.filter(u => u.companyId === state.currentCompany);
-  
-  // NOVA LINHA: Filtra para remover o próprio Admin da listagem
   list = list.filter(u => u.role !== 'admin');
-// ... (resto do código)
 
   el.innerHTML = `
     <div class="page-header">
@@ -30,19 +27,34 @@ function renderUsers(){
           return `<tr>
             <td><div style="display:flex;align-items:center;gap:10px">
               <div class="avatar" style="width:28px;height:28px;font-size:10px;background:${ROLE_COLORS[u.role]}">${initials(u.name)}</div>
-              <strong>${u.name}</strong></div></td>
+              <strong>${escapeHtml(u.name)}</strong></div></td>
             <td>${u.email}</td>
             <td><span class="tag" style="background:${ROLE_COLORS[u.role]}22;color:${ROLE_COLORS[u.role]}">${ROLE_LABELS[u.role]}</span></td>
             <td>${comp}</td>
             <td>${gestor}</td>
             <td>${count}</td>
             <td>
-              ${can('manageUsers') ? `<button class="btn btn-sm btn-ghost" style="padding:4px 8px" onclick="openEditUserModal('${u.id}')" title="Editar">✎</button>` : '—'}
+              ${can('manageUsers') ? `
+                <button class="btn btn-sm btn-ghost" style="padding:4px 8px" onclick="openEditUserModal('${u.id}')" title="Editar">✎</button>
+                <button class="btn btn-sm btn-ghost" style="padding:4px 8px" onclick="resetUserPassword('${u.email}')" title="Redefinir Senha">🔑</button>
+              ` : '—'}
             </td>
           </tr>`;
         }).join('')}
       </tbody>
     </table></div>`;
+}
+
+// --- RESETAR SENHA ---
+async function resetUserPassword(email) {
+  if(!confirm(`Deseja enviar um e-mail de redefinição de senha para ${email}?`)) return;
+  
+  const { error } = await window.db.auth.resetPasswordForEmail(email);
+  if (error) {
+    showToast("Erro ao enviar e-mail: " + error.message, "error");
+  } else {
+    showToast("E-mail de redefinição enviado!", "success");
+  }
 }
 
 function toggleCompanyField(role, prefix = 'newUser') {
@@ -59,7 +71,6 @@ function toggleCompanyField(role, prefix = 'newUser') {
 /* ---- Criar Usuário ---- */
 function openNewUserModal(){
   const managers = state.users.filter(u => ['admin', 'global_collaborator', 'unique_collaborator'].includes(u.role));
-  
   openModal(`
     <div class="modal-header">
       <h3>Novo Responsável</h3>
@@ -115,13 +126,8 @@ async function submitNewUser(btn){
 
   btn.textContent = 'Criando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  // Cria um cliente temporário que NÃO salva a sessão no localStorage
   const tempSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { 
-      persistSession: false, 
-      autoRefreshToken: false, 
-      detectSessionInUrl: false 
-    }
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
   });
 
   const { data, error } = await tempSupabase.auth.signUp({
@@ -131,18 +137,15 @@ async function submitNewUser(btn){
 
   if (error) { 
     errDiv.textContent = error.message; 
-    errDiv.classList.remove('hidden'); 
-    btn.textContent = 'Criar'; btn.disabled = false; 
-    return; 
+    errDiv.classList.remove('hidden'); btn.textContent = 'Criar'; btn.disabled = false; return; 
   }
 
-  // Verifica se o Supabase exigiu confirmação de e-mail
   if (data.user && !data.session) {
     console.warn("O usuário foi criado, mas o Supabase exigiu confirmação de e-mail.");
   }
 
   btn.closest('.modal-overlay').remove();
-  alert(`Usuário ${name} criado!\nSenha provisória: ${pass}`);
+  showToast(`Usuário ${name} criado!`, "success");
   await refreshUsersList();
 }
 
@@ -189,8 +192,6 @@ function openEditUserModal(userId) {
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
       <button class="btn btn-primary" id="btnEditUser" onclick="submitEditUser('${u.id}', this)">Salvar Alterações</button>
     </div>`);
-    
-  // Trigger o visual do select de empresa correto
   toggleCompanyField(u.role, 'editUser');
 }
 
@@ -205,38 +206,22 @@ async function submitEditUser(userId, btn) {
 
   btn.textContent = 'Salvando...'; btn.disabled = true; errDiv.classList.add('hidden');
 
-  // Adicionamos o .select().single() no final para ver se o banco realmente atualizou a linha
   const { data, error } = await window.db.from('profiles').update({
-    name: name, 
-    role: role, 
-    company_id: company_id ? Number(company_id) : null, 
-    manager_id: manager_id
+    name: name, role: role, company_id: company_id ? Number(company_id) : null, manager_id: manager_id
   }).eq('id', userId).select().single();
 
-  if (error) { 
-    errDiv.textContent = "Erro no banco: " + error.message; 
-    errDiv.classList.remove('hidden'); 
-    btn.textContent = 'Salvar'; btn.disabled = false; 
-    return; 
-  }
-
-  if (!data) {
-    // Se data for nulo, o RLS bloqueou a alteração silenciosamente
-    errDiv.textContent = "A alteração não foi permitida pelo banco (RLS).";
-    errDiv.classList.remove('hidden');
-    btn.textContent = 'Salvar'; btn.disabled = false;
-    return;
+  if (error || !data) { 
+    errDiv.textContent = "Erro no banco: " + (error ? error.message : 'Bloqueado'); 
+    errDiv.classList.remove('hidden'); btn.textContent = 'Salvar'; btn.disabled = false; return; 
   }
 
   btn.closest('.modal-overlay').remove();
-  alert('Usuário atualizado com sucesso!');
+  showToast('Usuário atualizado com sucesso!', "success");
   await refreshUsersList();
 }
 
 async function refreshUsersList(){
   const { data: profiles } = await window.db.from('profiles').select('*');
-  state.users = (profiles || []).map(p => ({
-    ...p, companyId: p.company_id, gestorId: p.manager_id
-  }));
+  state.users = (profiles || []).map(p => ({ ...p, companyId: p.company_id, gestorId: p.manager_id }));
   renderUsers();
 }
