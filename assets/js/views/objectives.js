@@ -121,15 +121,26 @@ function objectiveHTML(o, idx, compId){
       </div>
     </div>
     <div class="objective-body">
-      <div class="savings-edit">
-        <label>Estimativa de economia mensal</label>
-        <div class="input-wrap">
-          <span>R$</span>
-          <input type="number" step="0.01" min="0" value="${o.monthlySavings}" ${canEditObj?'':'disabled'}
-                 onchange="updateSavings('${compId}','${o.id}', this.value)">
+      
+      <!-- BLOCO DE EDIÇÃO DE NOME E ECONOMIA -->
+      <div class="savings-edit" style="flex-direction: column; align-items: stretch; gap: 12px;">
+        <div>
+          <label>Nome do Objetivo</label>
+          <input type="text" value="${escapeHtml(o.title)}" ${canEditObj?'':'disabled'} 
+                 onchange="updateObjectiveTitle('${compId}','${o.id}', this.value)" 
+                 style="width:100%; padding:8px 10px; border:1px solid var(--gray-200); border-radius:6px; font-weight:600; color:var(--gray-800); outline:none; margin-top: 4px;">
         </div>
-        ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <label>Estimativa de economia mensal</label>
+          <div class="input-wrap" style="flex: 1; max-width: 220px;">
+            <span>R$</span>
+            <input type="number" step="0.01" min="0" value="${o.monthlySavings}" ${canEditObj?'':'disabled'}
+                   onchange="updateSavings('${compId}','${o.id}', this.value)">
+          </div>
+          ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
+        </div>
       </div>
+
       <div class="tasks-header">
         <h4>Tarefas <span class="count">${taskCountText}</span></h4>
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
@@ -195,7 +206,7 @@ function submitNewObjective(btn){
   const overlay = btn.closest('.modal-overlay');
   const title = overlay.querySelector('#newObjTitle').value.trim();
   const savings = +overlay.querySelector('#newObjSavings').value || 0;
-  if(!title){ alert('Informe o título.'); return; }
+  if(!title){ showToast('Informe o título.', 'error'); return; }
   overlay.remove();
   createObjective(title, savings);
 }
