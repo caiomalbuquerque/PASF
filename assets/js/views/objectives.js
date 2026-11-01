@@ -88,11 +88,22 @@ function renderObjectivesListOnly(){
 
 function objectiveHTML(o, idx, compId){
   const allTasks = o.tasks;
-  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
+  
+  // Cálculos para o novo cabeçalho
+  const doneTasks = allTasks.filter(t => effectiveStatus(t) === 'Concluída');
+  const done = doneTasks.length;
   const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
+  
+  // Valores financeiros
+  const estMensal = +o.monthlySavings || 0;
+  const resultado = allTasks.reduce((s,t) => s + (+t.result||0), 0);
   const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
-  const totalResult = allTasks.reduce((s,t) => s + (+t.result||0), 0);
-  const net = totalResult - totalCost;
+  
+  // Saldo e Porcentagens (baseados no valor da Estimativa Mensal, se for maior que zero)
+  const saldo = resultado - totalCost;
+  const pctRealizado = estMensal > 0 ? (resultado / estMensal) * 100 : 0;
+  const pctPendente = estMensal > 0 ? ((estMensal - resultado) / estMensal) * 100 : 0;
+
   const canEditObj = can('editObj');
   const canAddTask = can('addTask');
 
@@ -109,41 +120,76 @@ function objectiveHTML(o, idx, compId){
 
   return `
   <div class="objective-card ${isOpen ? 'open' : ''}" id="obj-${o.id}" data-id="${o.id}">
-    <div class="objective-header" onclick="toggleObjective('${o.id}')">
-      <span class="chevron">▶</span>
-      <span class="objective-num">${String(idx+1).padStart(2,'0')}</span>
+    
+    <!-- CABEÇALHO REPROJETADO -->
+    <div class="objective-header" onclick="toggleObjective('${o.id}')" style="align-items: flex-start; padding: 20px;">
       
-      <div class="objective-title" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-        
-        <!-- ÁREA DO TÍTULO COM EDIÇÃO INLINE -->
-        ${isEditing ? `
-          <div style="display:flex; align-items:center; gap:8px; flex:1;" onclick="event.stopPropagation()">
-            <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
-                   class="task-desc" style="margin:0; width:100%; max-width:400px; font-size:15px; padding:4px 8px; height:32px;"
-                   onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')">
-            <button class="btn btn-sm btn-primary" style="padding:4px 10px; height:32px;" onclick="saveObjectiveTitle('${compId}','${o.id}')" title="Salvar">✓</button>
-            <button class="btn btn-sm btn-ghost" style="padding:4px 10px; height:32px;" onclick="cancelEditObjective('${o.id}')" title="Cancelar">✕</button>
-          </div>
-        ` : `
-          <div style="display:flex; align-items:center; gap:8px; flex:1;">
-            <h3>${escapeHtml(o.title)}</h3>
-            ${canEditObj ? `<button class="btn btn-sm btn-ghost" style="padding:2px 6px; color:var(--gray-400);" onclick="event.stopPropagation(); startEditObjective('${o.id}')" title="Editar nome">✎</button>` : ''}
-          </div>
-        `}
+      <!-- Coluna 1: Chevron, Número, Título e Meta -->
+      <div style="display:flex; gap:14px; flex: 1; min-width: 250px;">
+        <span class="chevron" style="margin-top: 4px;">▶</span>
+        <span class="objective-num" style="margin-top: 2px;">${String(idx+1).padStart(2,'0')}</span>
+        <div style="flex:1;">
+          
+          ${isEditing ? `
+            <div style="display:flex; align-items:center; gap:8px;" onclick="event.stopPropagation()">
+              <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
+                     class="task-desc" style="margin:0; width:100%; max-width:400px; font-size:15px; padding:4px 8px; height:32px;"
+                     onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')">
+              <button class="btn btn-sm btn-primary" style="padding:4px 10px; height:32px;" onclick="saveObjectiveTitle('${compId}','${o.id}')" title="Salvar">✓</button>
+              <button class="btn btn-sm btn-ghost" style="padding:4px 10px; height:32px;" onclick="cancelEditObjective('${o.id}')" title="Cancelar">✕</button>
+            </div>
+          ` : `
+            <div style="display:flex; align-items:flex-start; gap:8px;">
+              <h3 style="font-size:16px; line-height:1.3; margin:0;">${escapeHtml(o.title)}</h3>
+              ${canEditObj ? `<button class="btn btn-sm btn-ghost" style="padding:2px 6px; color:var(--gray-400);" onclick="event.stopPropagation(); startEditObjective('${o.id}')" title="Editar nome">✎</button>` : ''}
+            </div>
+          `}
 
-        <div class="meta">
-          <span>${allTasks.length} tarefa${allTasks.length!==1?'s':''}</span>
-          <span>${done} concluída${done!==1?'s':''}</span>
-          ${late ? `<span style="color:#991b1b;font-weight:600">${late} em atraso</span>` : ''}
+          <div class="meta" style="margin-top: 8px;">
+            <span style="font-weight:600; color:var(--gray-500)">${allTasks.length} micro ação(ões)</span>
+            <span class="tag" style="background:var(--status-done-bg); color:var(--status-done-text); font-weight:700">C ${done}</span>
+            ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700">A ${late}</span>` : ''}
+          </div>
         </div>
       </div>
 
-      <div class="objective-savings" style="margin-left: 16px;">
-        <div class="label">Economia estimada</div>
-        <div class="value">${fmtBRL(o.monthlySavings)}/mês</div>
+      <!-- Coluna 2, 3, 4, 5: Métricas Financeiras -->
+      <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top: 2px; text-align:center; justify-content:flex-end;">
+        
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultado > 0 ? fmtBRL(resultado) : '—'}</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Economia Efetiva</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
+          <span style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--danger)' : 'var(--danger)'}; margin-top:4px">${saldo < 0 ? fmtBRL(saldo) : fmtBRL(saldo)}</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${pctPendente.toFixed(1)}%</span>
+        </div>
+
       </div>
     </div>
     
+    <!-- CORPO EXPANDIDO (Mantido igual) -->
     <div class="objective-body">
       <div class="savings-edit">
         <label>Estimativa de economia mensal</label>
@@ -154,10 +200,12 @@ function objectiveHTML(o, idx, compId){
         </div>
         ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
       </div>
+      
       <div class="tasks-header">
         <h4>Tarefas <span class="count">${taskCountText}</span></h4>
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
       </div>
+      
       <div>
         ${filteredTasks.length > 0 
           ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
@@ -166,10 +214,11 @@ function objectiveHTML(o, idx, compId){
              </p>`
         }
       </div>
+      
       <div class="objective-totals">
         <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
-        <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(totalResult)}</span></div>
-        <div class="t"><span class="label">Saldo</span><span class="value ${net>=0?'pos':'neg'}">${fmtBRL(net)}</span></div>
+        <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(resultado)}</span></div>
+        <div class="t"><span class="label">Saldo Financeiro</span><span class="value ${saldo>=0?'pos':'neg'}">${fmtBRL(saldo)}</span></div>
       </div>
     </div>
   </div>`;
