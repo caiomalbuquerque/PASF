@@ -89,20 +89,27 @@ function renderObjectivesListOnly(){
 function objectiveHTML(o, idx, compId){
   const allTasks = o.tasks;
   
-  // Cálculos para o novo cabeçalho
-  const doneTasks = allTasks.filter(t => effectiveStatus(t) === 'Concluída');
-  const done = doneTasks.length;
+  // Cálculos de Status e Tarefas
+  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
   const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
   
-  // Valores financeiros
+  // Cálculos Financeiros
   const estMensal = +o.monthlySavings || 0;
-  const resultado = allTasks.reduce((s,t) => s + (+t.result||0), 0);
+  
+  // O valor "Entregue" soma apenas os resultados das tarefas CONCLUÍDAS
+  const resultadoEntregue = allTasks
+    .filter(t => effectiveStatus(t) === 'Concluída')
+    .reduce((s,t) => s + (+t.result||0), 0);
+    
+  // O Custo soma todas as tarefas
   const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
   
-  // Saldo e Porcentagens (baseados no valor da Estimativa Mensal, se for maior que zero)
-  const saldo = resultado - totalCost;
-  const pctRealizado = estMensal > 0 ? (resultado / estMensal) * 100 : 0;
-  const pctPendente = estMensal > 0 ? ((estMensal - resultado) / estMensal) * 100 : 0;
+  // Saldo é Entregue - Custo
+  const saldo = resultadoEntregue - totalCost;
+  
+  // Porcentagens baseadas na Estimativa Mensal
+  const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
+  const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
 
   const canEditObj = can('editObj');
   const canAddTask = can('addTask');
@@ -110,6 +117,7 @@ function objectiveHTML(o, idx, compId){
   const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
   const isEditing = state._editingObjectives && state._editingObjectives.includes(String(o.id));
 
+  // Filtro de status do topo da página
   const filteredTasks = state._objStatus 
     ? allTasks.filter(t => effectiveStatus(t) === state._objStatus)
     : allTasks;
@@ -145,15 +153,15 @@ function objectiveHTML(o, idx, compId){
             </div>
           `}
 
+          <!-- TEXTO DE TAREFAS CONCLUÍDAS -->
           <div class="meta" style="margin-top: 8px;">
-            <span style="font-weight:600; color:var(--gray-500)">${allTasks.length} micro ação(ões)</span>
-            <span class="tag" style="background:var(--status-done-bg); color:var(--status-done-text); font-weight:700">C ${done}</span>
-            ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700">A ${late}</span>` : ''}
+            <span style="font-weight:600; color:var(--gray-500)">${done}/${allTasks.length} tarefas concluídas</span>
+            ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; margin-left: 6px">${late} em atraso</span>` : ''}
           </div>
         </div>
       </div>
 
-      <!-- Coluna 2, 3, 4, 5: Métricas Financeiras -->
+      <!-- Coluna 2, 3, 4, 5, 6: Métricas Financeiras -->
       <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top: 2px; text-align:center; justify-content:flex-end;">
         
         <div style="display:flex; flex-direction:column;">
@@ -163,33 +171,33 @@ function objectiveHTML(o, idx, compId){
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
-          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultado > 0 ? fmtBRL(resultado) : '—'}</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Economia Efetiva</span>
-          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
-          <span style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--danger)' : 'var(--danger)'}; margin-top:4px">${saldo < 0 ? fmtBRL(saldo) : fmtBRL(saldo)}</span>
+          <span style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
-          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
+          <span style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
-          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${pctPendente.toFixed(1)}%</span>
+          <span style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
         </div>
 
       </div>
     </div>
     
-    <!-- CORPO EXPANDIDO (Mantido igual) -->
+    <!-- CORPO EXPANDIDO (Oculto por padrão) -->
     <div class="objective-body">
       <div class="savings-edit">
         <label>Estimativa de economia mensal</label>
@@ -200,12 +208,10 @@ function objectiveHTML(o, idx, compId){
         </div>
         ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
       </div>
-      
       <div class="tasks-header">
         <h4>Tarefas <span class="count">${taskCountText}</span></h4>
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
       </div>
-      
       <div>
         ${filteredTasks.length > 0 
           ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
@@ -214,10 +220,9 @@ function objectiveHTML(o, idx, compId){
              </p>`
         }
       </div>
-      
       <div class="objective-totals">
         <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
-        <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(resultado)}</span></div>
+        <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(resultadoEntregue)}</span></div>
         <div class="t"><span class="label">Saldo Financeiro</span><span class="value ${saldo>=0?'pos':'neg'}">${fmtBRL(saldo)}</span></div>
       </div>
     </div>
