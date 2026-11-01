@@ -13,7 +13,6 @@ function effectiveStatus(task){
 function findTask(taskId){
   for(const compId in state.objectives){
     for(const o of state.objectives[compId]){
-      // MUDANÇA: Força a comparação de string para não falhar com UUIDs
       const t = o.tasks.find(x => String(x.id) === String(taskId));
       if(t) return { compId, objective:o, task:t };
     }
@@ -24,31 +23,7 @@ function findTask(taskId){
 function refreshObjectiveDOM(objId, compId) {
   const o = (state.objectives[compId] || []).find(x => x.id === objId);
   if (!o) return;
-
-  const allTasks = o.tasks;
-  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
-  const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
-  const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
-  const totalResult = allTasks.reduce((s,t) => s + (+t.result||0), 0);
-  const net = totalResult - totalCost;
-
-  const metaEl = $(`meta-${objId}`);
-  if (metaEl) {
-    metaEl.innerHTML = `
-      <span>${allTasks.length} tarefa${allTasks.length!==1?'s':''}</span>
-      <span>${done} concluída${done!==1?'s':''}</span>
-      ${late ? `<span style="color:#991b1b;font-weight:600">${late} em atraso</span>` : ''}
-    `;
-  }
-
-  const totalsEl = $(`totals-${objId}`);
-  if (totalsEl) {
-    totalsEl.innerHTML = `
-      <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
-      <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(totalResult)}</span></div>
-      <div class="t"><span class="label">Saldo</span><span class="value ${net>=0?'pos':'neg'}">${fmtBRL(net)}</span></div>
-    `;
-  }
+  // Não é mais usado, mas mantido por compatibilidade
 }
 
 async function updateTask(compId, taskId, field, value){
@@ -109,7 +84,6 @@ async function updateTask(compId, taskId, field, value){
     }]);
   }
 
-  // Atualiza a capa da tarefa se a descrição mudou
   if (field === 'description') {
     const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
     if (taskCard) {
@@ -119,6 +93,7 @@ async function updateTask(compId, taskId, field, value){
   }
 
   renderObjectivesListOnly();
+} // <-- ESSA CHAVE ESTAVA FALTANDO NO SEU CÓDIGO
 
 async function addTask(compId, objId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
