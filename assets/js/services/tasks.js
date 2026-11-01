@@ -109,6 +109,7 @@ async function updateTask(compId, taskId, field, value){
     }]);
   }
 
+  // Atualiza a capa da tarefa se a descrição mudou
   if (field === 'description') {
     const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
     if (taskCard) {
@@ -117,20 +118,7 @@ async function updateTask(compId, taskId, field, value){
     }
   }
 
-  refreshObjectiveDOM(found.objective.id, compId);
-  
-  if (field === 'status' || field === 'endDate') {
-      const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
-      if (taskCard) {
-          const statusLabel = taskCard.querySelector('.task-field:nth-child(4) label');
-          if (statusLabel) {
-              const eff = effectiveStatus(found.task);
-              const autoLate = eff === 'Atrasada' && found.task.status !== 'Atrasada';
-              statusLabel.innerHTML = `Status ${autoLate ? '<span class="late-badge">⚠ Atrasada</span>' : ''}`;
-          }
-      }
-  }
-}
+  renderObjectivesListOnly();
 
 async function addTask(compId, objId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
