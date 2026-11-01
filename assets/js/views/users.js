@@ -87,7 +87,8 @@ function openNewUserModal(){
 
       <label>Perfil de Acesso</label>
       <select id="newUserRole" onchange="toggleCompanyField(this.value, 'newUser')">
-        <option value="unique_user">Usuário (Empresa)</option>
+        <option value="unique_user">Usuário Padrão</option>
+        <option value="unique_leader">Líder</option> <!-- NOVO -->
         <option value="unique_collaborator">Gestor (Empresa)</option>
         <option value="unique_viewer">Viewer (Empresa)</option>
         <option value="global_collaborator">Colaborador Global</option>
@@ -168,7 +169,8 @@ function openEditUserModal(userId) {
       
       <label>Perfil de Acesso</label>
       <select id="editUserRole" onchange="toggleCompanyField(this.value, 'editUser')">
-        <option value="unique_user" ${u.role==='unique_user'?'selected':''}>Usuário (Empresa)</option>
+        <option value="unique_user" ${u.role==='unique_user'?'selected':''}>Usuário Padrão</option>
+        <option value="unique_leader" ${u.role==='unique_leader'?'selected':''}>Líder</option> <!-- NOVO -->
         <option value="unique_collaborator" ${u.role==='unique_collaborator'?'selected':''}>Gestor (Empresa)</option>
         <option value="unique_viewer" ${u.role==='unique_viewer'?'selected':''}>Viewer (Empresa)</option>
         <option value="global_collaborator" ${u.role==='global_collaborator'?'selected':''}>Colaborador Global</option>
