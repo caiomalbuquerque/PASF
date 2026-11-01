@@ -3,7 +3,11 @@
 
 function taskHTML(t, compId, objId){
   const users = usersOfCompany(compId);
-  const edit = can('editTask');
+  // Regra especial: Usuário Padrão só edita se for o responsável
+  const isAssignedToMe = String(t.responsibleId) === String(state.currentUser.id);
+  const canEditTaskGlobal = can('editTask');
+  const edit = (state.currentUser.role === 'unique_user') ? isAssignedToMe : canEditTaskGlobal;
+  
   const del = can('delTask');
   const descEdit = can('editObj') || can('addTask');
   const eff = effectiveStatus(t);
