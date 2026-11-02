@@ -39,3 +39,13 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
+
+async function safeQuery(promise) {
+  const result = await promise;
+  if (result?.error?.message?.includes('JWT expired')) {
+    await window.db.auth.signOut();
+    window.location.href = 'index.html';
+    return null;
+  }
+  return result;
+}
