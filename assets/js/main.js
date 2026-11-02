@@ -95,6 +95,7 @@
 })();
 
 let realtimeRenderTimeout;
+let realtimeObjTimeout;
 
 function initRealtime(){
   // 1. Canal de Notificações
@@ -116,35 +117,13 @@ function initRealtime(){
       
       const updatedTask = payload.new;
       let foundAny = false;
-
-    // 3. Canal de Objetivos (Sincronização do Título)
-  window.db.channel('objectives_realtime')
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'objectives' }, payload => {
-      const updatedObj = payload.new;
       
-      Object.keys(state.objectives).forEach(compId => {
-        const objIndex = state.objectives[compId].findIndex(o => String(o.id) === String(updatedObj.id));
-        if (objIndex !== -1) {
-          state.objectives[compId][objIndex].title = updatedObj.title;
-          state.objectives[compId][objIndex].monthlySavings = updatedObj.monthly_savings;
-          
-          clearTimeout(window.realtimeObjTimeout);
-          window.realtimeObjTimeout = setTimeout(() => {
-            renderObjectivesListOnly();
-          }, 150);
-        }
-      });
-    })
-    .subscribe();
-      
-      // Percorre TODO o state para garantir que o dado foi atualizado em todas as referências
       Object.keys(state.objectives).forEach(compId => {
         state.objectives[compId].forEach(obj => {
           const taskIndex = obj.tasks.findIndex(t => String(t.id) === String(updatedTask.id));
           
           if (taskIndex !== -1) {
             foundAny = true;
-            // Atualiza os dados da tarefa
             obj.tasks[taskIndex] = {
               ...obj.tasks[taskIndex],
               ...updatedTask,
@@ -153,7 +132,6 @@ function initRealtime(){
               endDate: updatedTask.end_date
             };
             
-            // Reordena o array
             obj.tasks.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
           }
         });
@@ -164,7 +142,6 @@ function initRealtime(){
         realtimeRenderTimeout = setTimeout(() => {
           const activeView = document.querySelector('.nav-item.active')?.dataset.view;
           
-          // Em vez de desenhar tudo, atualiza só o cartão da tarefa que mudou
           if (activeView === 'objetivos') {
             const found = findTask(updatedTask.id);
             if(found) updateObjectiveDOM(found.objective.id, found.compId);
@@ -175,6 +152,29 @@ function initRealtime(){
           }
         }, 150); 
       }
+    })
+    .subscribe();
+
+  // 3. Canal de Objetivos (Sincronização do Título)
+  window.db.channel('objectives_realtime')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'objectives' }, payload => {
+      const updatedObj = payload.new;
+      
+      Object.keys(state.objectives).forEach(compId => {
+        const objIndex = state.objectives[compId].findIndex(o => String(o.id) === String(updatedObj.id));
+        if (objIndex !== -1) {
+          state.objectives[compId][objIndex].title = updatedObj.title;
+          state.objectives[compId][objIndex].monthlySavings = updatedObj.monthly_savings;
+          
+          clearTimeout(realtimeObjTimeout);
+          realtimeObjTimeout = setTimeout(() => {
+            const activeView = document.querySelector('.nav-item.active')?.dataset.view;
+            if (activeView === 'objetivos') {
+              updateObjectiveDOM(updatedObj.id, compId);
+            }
+          }, 150);
+        }
+      });
     })
     .subscribe();
 }
