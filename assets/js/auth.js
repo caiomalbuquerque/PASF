@@ -3,16 +3,18 @@
 async function handleLogin(e){
   e.preventDefault();
   const email = $('loginEmail').value.trim().toLowerCase();
-  const pass = $('loginPass').value;
-  const err = $('loginError');
-  const btn = e.target.querySelector('button[type="submit"]');
-  
+  const pass  = $('loginPass').value;
+  const err   = $('loginError');
+  const info  = $('loginInfo');
+  const btn   = e.target.querySelector('button[type="submit"]');
+
   btn.textContent = 'Entrando...';
   btn.disabled = true;
   err.classList.add('hidden');
+  info?.classList.add('hidden');
 
   // 1. Autentica no Supabase Auth
-  const { data: authData, error: authError } = await window.db.auth.signInWithPassword({ email, password: pass });
+  const { error: authError } = await window.db.auth.signInWithPassword({ email, password: pass });
 
   if (authError) {
     err.textContent = 'E-mail ou senha inválidos.';
@@ -22,9 +24,47 @@ async function handleLogin(e){
     return;
   }
 
-  // A sessão já é salva automaticamente pelo Supabase no localStorage.
-  // Apenas redireciona para o app.
+  // Sessão é salva automaticamente pelo Supabase no localStorage.
   window.location.href = 'app.html';
+}
+
+async function handleForgotPassword(e){
+  e?.preventDefault();
+  const email = $('loginEmail').value.trim().toLowerCase();
+  const err   = $('loginError');
+  const info  = $('loginInfo');
+  const btn   = $('forgotBtn');
+
+  err.classList.add('hidden');
+  info?.classList.add('hidden');
+
+  if (!email) {
+    err.textContent = 'Digite seu e-mail acima primeiro, depois clique em "Esqueci minha senha".';
+    err.classList.remove('hidden');
+    $('loginEmail').focus();
+    return;
+  }
+
+  if (!confirm(`Enviar e-mail de redefinição de senha para ${email}?`)) return;
+
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+
+  // URL absoluta do reset.html — funciona em dev e prod
+  const redirectTo = new URL('reset.html', window.location.href).href;
+
+  const { error } = await window.db.auth.resetPasswordForEmail(email, { redirectTo });
+
+  btn.textContent = 'Esqueci minha senha';
+  btn.disabled = false;
+
+  if (error) {
+    err.textContent = 'Erro: ' + error.message;
+    err.classList.remove('hidden');
+  } else if (info) {
+    info.textContent = 'E-mail enviado! Verifique sua caixa de entrada (e o spam).';
+    info.classList.remove('hidden');
+  }
 }
 
 async function logout(){
@@ -33,15 +73,15 @@ async function logout(){
 }
 
 async function requireAuth(){
-  // 1. Verifica se existe uma sessão ativa no Supabase
+  // 1. Sessão ativa?
   const { data: { session }, error } = await window.db.auth.getSession();
-  
+
   if (error || !session) {
     window.location.href = 'index.html';
     return null;
   }
 
-  // 2. Busca os dados do perfil em tempo real no banco de dados
+  // 2. Perfil em tempo real
   const { data: profile, error: profileError } = await window.db
     .from('profiles')
     .select('*')
@@ -55,7 +95,7 @@ async function requireAuth(){
     return null;
   }
 
-  // 3. Mapeia e retorna os dados sempre atualizados
+  // 3. Mapeamento
   return {
     ...profile,
     companyId: profile.company_id,
@@ -64,22 +104,14 @@ async function requireAuth(){
 }
 
 async function bootLoginPage(){
-  // Se o usuário já tem uma sessão válida, pula a tela de login
   const { data: { session } } = await window.db.auth.getSession();
   if(session){
     window.location.href = 'app.html';
     return;
   }
-  
+
   $('loginForm').addEventListener('submit', handleLogin);
-  
-  const demoGrid = $('demoGrid');
-  if(demoGrid) {
-    demoGrid.innerHTML = `<p style="font-size:11px;color:var(--gray-500);text-align:center;grid-column:1/-1">
-      Para testar, crie usuários no painel do Supabase (Authentication > Users)<br>
-      e vincule-os na tabela 'profiles'.
-    </p>`;
-  }
+  $('forgotBtn')?.addEventListener('click', handleForgotPassword);
 }
 
 if(document.getElementById('loginForm')) bootLoginPage();
