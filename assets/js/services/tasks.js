@@ -37,37 +37,35 @@ async function updateTask(compId, taskId, field, value){
                   field === 'startDate' ? 'start_date' : 
                   field === 'endDate' ? 'end_date' : field;
 
+  // 1. Atualiza no banco e espera a resposta (rápido)
   const { error } = await window.db.from('tasks').update({ [dbField]: value || null }).eq('id', taskId);
   if (error) { showToast("Erro ao salvar tarefa: " + error.message, "error"); return; }
 
+  // 2. Atualiza o state local
   found.task[field] = value;
   
+  // 3. ATUALIZAÇÃO CIRÚRGICA INSTANTÂNEA (Sem engasgos!)
+  updateObjectiveDOM(found.objective.id, compId);
+
+  // 4. O resto (logs e notificações) roda em background, sem await.
   if (field !== 'created_at' && field !== 'updated_at') {
-    const { data: logData, error: logErr } = await window.db.from('audit_logs').insert([{
+    window.db.from('audit_logs').insert([{
       task_id: taskId,
       user_id: state.currentUser.id,
       field_changed: FIELD_LABELS[field] || field,
       old_value: String(oldValue || ''),
       new_value: String(value || '')
-    }]).select().single();
-  
-    if (logErr) {
-      console.error('❌ Erro do Supabase ao salvar log:', logErr);
-    } else if (logData) {
-      state.auditLog.push({
-        id: logData.id,
-        taskId: logData.task_id,
-        userId: logData.user_id,
-        field: logData.field_changed,
-        oldValue: logData.old_value,
-        newValue: logData.new_value,
-        timestamp: logData.created_at || new Date().toISOString()
-      });
-    }
+    }]).then(({data, error}) => {
+      if (!error && data) {
+        state.auditLog.push({
+          id: data[0].id, taskId, userId: state.currentUser.id, field, oldValue, newValue: value, timestamp: data[0].created_at
+        });
+      }
+    });
   }
 
   if(state.currentUser.gestorId && state.currentUser.gestorId !== state.currentUser.id){
-    await window.db.from('notifications').insert([{
+    window.db.from('notifications').insert([{
       user_id: state.currentUser.gestorId,
       message: `${state.currentUser.name} atualizou "${FIELD_LABELS[field]||field}" da tarefa "${found.task.description || '(sem descrição)'}"`,
       task_id: taskId,
@@ -76,24 +74,14 @@ async function updateTask(compId, taskId, field, value){
   }
 
   if(field === 'responsibleId' && value !== state.currentUser.id){
-    await window.db.from('notifications').insert([{
+    window.db.from('notifications').insert([{
       user_id: value,
       message: `Você foi atribuído(a) à tarefa "${found.task.description || '(sem descrição)'}"`,
       task_id: taskId,
       target_field: field
     }]);
   }
-
-  if (field === 'description') {
-    const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
-    if (taskCard) {
-      const headerDesc = taskCard.querySelector('.task-header .desc');
-      if (headerDesc) headerDesc.textContent = value || '(Nova tarefa sem descrição)';
-    }
-  }
-
-  renderObjectivesListOnly();
-} // <-- ESSA CHAVE ESTAVA FALTANDO NO SEU CÓDIGO
+}
 
 async function addTask(compId, objId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
