@@ -8,5 +8,13 @@ const state = {
   auditLog: [],
   notifications: [],
   currentUser: null,
-  currentCompany: null
+  currentCompany: null,
+  currentObjective: null,
+
+  // Flags internas de UI
+  _openTasks: [],
+  _editingTasks: [],
+  _editingObjectives: [],
+  _objSearch: '',
+  _objStatus: ''
 };
