@@ -2,15 +2,22 @@
 
 function renderObjectives(){
   const el = $('view-objetivos');
-  const isGlobal = can('scope') === 'all';
   
+  // Se tem um objetivo selecionado, renderiza a tela de detalhes
+  if (state.currentObjective) {
+    renderObjectiveDetail(state.currentObjective, el);
+    return;
+  }
+
+  // Se não, renderiza a lista de objetivos
+  const isGlobal = can('scope') === 'all';
   if (!el.querySelector('#obj-header-container')) {
     let headerHTML = `
       <div id="obj-header-container">
         <div class="page-header">
           <div>
             <h1>Objetivos do plano de ação</h1>
-            <p>${isGlobal ? 'Visão consolidada de todas as empresas.' : 'Cada linha representa um objetivo. Clique para expandir e gerenciar as tarefas (5W2H).'}</p>
+            <p>${isGlobal ? 'Visão consolidada de todas as empresas. Clique em um objetivo para gerenciar as tarefas.' : 'Clique em um objetivo para ver e gerenciar suas tarefas (5W2H).'}</p>
           </div>
           ${can('createObj') ? `<button class="btn btn-primary" onclick="openNewObjectiveModal()">+ Novo objetivo</button>` : ''}
         </div>
@@ -26,14 +33,24 @@ function renderObjectives(){
     `;
     el.innerHTML = headerHTML;
 
-    $('searchObj')?.addEventListener('input', e => { state._objSearch = e.target.value; renderObjectivesListOnly(); });
-    $('filterStatus')?.addEventListener('change', e => { state._objStatus = e.target.value; renderObjectivesListOnly(); });
+    $('searchObj')?.addEventListener('input', e => { state._objSearch = e.target.value; renderObjectives(); });
+    $('filterStatus')?.addEventListener('change', e => { state._objStatus = e.target.value; renderObjectives(); });
   } else {
     const searchInput = $('searchObj');
     if(searchInput && searchInput.value !== (state._objSearch || '')){ searchInput.value = state._objSearch || ''; }
   }
 
   renderObjectivesListOnly();
+}
+
+function openObjectiveDetail(objId) {
+  state.currentObjective = objId;
+  renderObjectives();
+}
+
+function closeObjectiveDetail() {
+  state.currentObjective = null;
+  renderObjectives();
 }
 
 function renderObjectivesListOnly(){
@@ -48,10 +65,8 @@ function renderObjectivesListOnly(){
   let body = '';
   comps.forEach(comp => {
     let objs = [...(state.objectives[comp.id] || [])];
-    objs.sort((a, b) => {
-      if (a.created_at && b.created_at) return new Date(a.created_at) - new Date(b.created_at);
-      return String(a.id).localeCompare(String(b.id));
-    });
+    objs.sort((a, b) => (a.created_at && b.created_at) ? new Date(a.created_at) - new Date(b.created_at) : String(a.id).localeCompare(String(b.id)));
+    
     if(search) objs = objs.filter(o => o.title.toLowerCase().includes(search));
     if(fStatus) objs = objs.filter(o => o.tasks.some(t => effectiveStatus(t) === fStatus));
 
@@ -64,11 +79,195 @@ function renderObjectivesListOnly(){
         ${can('createObj') ? 'Nenhum objetivo. Clique em <strong>+ Novo objetivo</strong>.' : 'Nenhum objetivo cadastrado.'}
       </div></div>`;
     } else {
-      body += objs.map((o, idx) => objectiveHTML(o, idx, comp.id)).join('');
+      body += objs.map((o, idx) => objectiveSummaryHTML(o, idx, comp.id)).join('');
     }
     if(isGlobal) body += `</div>`;
   });
+
   elList.innerHTML = body;
+}
+
+// O CARTÃO DA LISTA (Sem as tarefas dentro)
+function objectiveSummaryHTML(o, idx, compId){
+  const allTasks = o.tasks;
+  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
+  const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
+  const estMensal = +o.monthlySavings || 0;
+  const resultadoEntregue = allTasks.filter(t => effectiveStatus(t) === 'Concluída').reduce((s,t) => s + (+t.result||0), 0);
+  const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
+  const saldo = resultadoEntregue - totalCost;
+  const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
+  const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
+
+  return `
+  <div class="objective-card" style="margin-bottom: 16px; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;" 
+       onclick="openObjectiveDetail('${o.id}')"
+       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-md)'"
+       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow)'">
+    
+    <div class="objective-header" style="align-items: flex-start; padding: 20px; border-bottom: none;">
+      
+      <div style="display:flex; gap:14px; flex: 1; min-width: 250px;">
+        <span class="objective-num" style="margin-top: 2px;">${String(idx+1).padStart(2,'0')}</span>
+        <div style="flex:1;">
+          <h3 style="font-size:16px; line-height:1.3; margin:0;">${escapeHtml(o.title)}</h3>
+          <div class="meta" style="margin-top: 8px; display:flex; gap:8px;">
+            <span id="meta-done-${o.id}" style="font-weight:600; color:var(--gray-500)">${done}/${allTasks.length} tarefas concluídas</span>
+            ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700;">${late} em atraso</span>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top: 2px; text-align:center; justify-content:flex-end;">
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
+          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
+          <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
+          <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
+          <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
+          <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
+          <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
+        </div>
+      </div>
+      
+      <div style="margin-left: 20px; color: var(--primary); font-size: 20px; font-weight: bold; align-self: center;">
+        &rarr;
+      </div>
+    </div>
+  </div>`;
+}
+
+// A TELA DE DETALHES DO OBJETIVO
+function renderObjectiveDetail(objId, el) {
+  let compId = null;
+  let o = null;
+  for (const cid in state.objectives) {
+    const found = state.objectives[cid].find(x => String(x.id) === String(objId));
+    if (found) { compId = cid; o = found; break; }
+  }
+  if (!o) { closeObjectiveDetail(); return; }
+
+  const allTasks = o.tasks;
+  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
+  const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
+  const estMensal = +o.monthlySavings || 0;
+  const resultadoEntregue = allTasks.filter(t => effectiveStatus(t) === 'Concluída').reduce((s,t) => s + (+t.result||0), 0);
+  const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
+  const saldo = resultadoEntregue - totalCost;
+  const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
+  const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
+
+  const canEditObj = can('editObj');
+  const canAddTask = can('addTask');
+  const isEditing = state._editingObjectives && state._editingObjectives.includes(String(o.id));
+  const filteredTasks = state._objStatus ? allTasks.filter(t => effectiveStatus(t) === state._objStatus) : allTasks;
+  const taskCountText = filteredTasks.length !== allTasks.length ? `${filteredTasks.length} de ${allTasks.length}` : `${allTasks.length}`;
+
+  el.innerHTML = `
+    <div style="margin-bottom: 20px;">
+      <button class="btn btn-ghost" onclick="closeObjectiveDetail()" style="padding: 6px 12px; font-size: 13px;">
+        &larr; Voltar para Objetivos
+      </button>
+    </div>
+
+    <div class="objective-card" style="box-shadow: none; border: 1px solid var(--gray-200);">
+      
+      <div class="objective-header" style="align-items: flex-start; padding: 24px; background: #fff; border-bottom: 1px solid var(--gray-200);">
+        <div style="display:flex; gap:14px; flex: 1; min-width: 250px; flex-wrap: wrap;">
+          <div style="flex:1; min-width: 200px;">
+            ${isEditing ? `
+              <div style="display:flex; flex-direction: column; width: 100%;">
+                <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
+                       class="task-title-input"
+                       onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')"
+                       onblur="setTimeout(() => saveObjectiveTitle('${compId}','${o.id}'), 150)"
+                       onkeydown="if(event.key === 'Escape') cancelEditObjective('${o.id}', '${compId}')">
+              </div>
+            ` : `
+              <h3 style="font-size:22px; line-height:1.3; margin:0; word-break: break-word; ${canEditObj ? 'cursor:text; transition: color 0.2s;' : ''}" 
+                  onclick="${canEditObj ? `startEditObjective('${o.id}', '${compId}')` : ''}"
+                  onmouseover="${canEditObj ? 'this.style.color=\'var(--primary)\'' : ''}" 
+                  onmouseout="${canEditObj ? 'this.style.color=\'\'' : ''}">
+                ${escapeHtml(o.title)}
+              </h3>
+            `}
+            <div class="meta" style="margin-top: 12px; display:flex; gap:12px;">
+              <span id="meta-done-${o.id}" style="font-weight:600; color:var(--gray-500); font-size: 14px;">${done}/${allTasks.length} tarefas concluídas</span>
+              <span id="meta-late-${o.id}" class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; ${late === 0 ? 'display:none' : ''}">${late} em atraso</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top: 10px; text-align:center; justify-content:flex-end;">
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
+            <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
+            <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
+            <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
+            <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
+            <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
+            <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="objective-body" style="display: block; padding: 24px; background: var(--gray-50);">
+        <div class="savings-edit">
+          <label>Estimativa de economia mensal</label>
+          <div class="input-wrap">
+            <span>R$</span>
+            <input type="number" step="0.01" min="0" value="${o.monthlySavings}" ${canEditObj?'':'disabled'} onchange="updateSavings('${compId}','${o.id}', this.value)">
+          </div>
+          ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
+        </div>
+        
+        <div class="tasks-header" style="margin-top: 24px;">
+          <h4 style="font-size: 16px;">Tarefas <span class="count">${taskCountText}</span></h4>
+          ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
+        </div>
+        
+        <div>
+          ${filteredTasks.length > 0 ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') : `<p style="color:var(--gray-500);font-size:13px;padding:16px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;text-align:center">Nenhuma tarefa encontrada.</p>`}
+        </div>
+        
+        <div class="objective-totals" style="background: #fff;">
+          <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
+          <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(resultadoEntregue)}</span></div>
+          <div class="t"><span class="label">Saldo Financeiro</span><span class="value ${saldo>=0?'pos':'neg'}">${fmtBRL(saldo)}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function updateObjectiveMetrics(objId, compId) {
@@ -108,6 +307,12 @@ function updateObjectiveMetrics(objId, compId) {
 }
 
 function refreshObjectiveDOM(objId, compId) {
+  // Se estivermos na tela de detalhes, re-renderiza a tela inteira
+  if (state.currentObjective && String(state.currentObjective) === String(objId)) {
+    renderObjectives();
+    return;
+  }
+  // Se estivermos na lista, atualiza só os números do cartão
   const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
   if (!o) return;
   const card = document.getElementById(`obj-${objId}`);
@@ -116,139 +321,21 @@ function refreshObjectiveDOM(objId, compId) {
     objs.sort((a, b) => (a.created_at && b.created_at) ? new Date(a.created_at) - new Date(b.created_at) : String(a.id).localeCompare(String(b.id)));
     const idx = objs.findIndex(x => String(x.id) === String(objId));
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = objectiveHTML(o, idx, compId).trim();
+    tempDiv.innerHTML = objectiveSummaryHTML(o, idx, compId).trim();
     card.replaceWith(tempDiv.firstElementChild);
-  }
-}
-
-function objectiveHTML(o, idx, compId){
-  const allTasks = o.tasks;
-  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
-  const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
-  const estMensal = +o.monthlySavings || 0;
-  const resultadoEntregue = allTasks.filter(t => effectiveStatus(t) === 'Concluída').reduce((s,t) => s + (+t.result||0), 0);
-  const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
-  const saldo = resultadoEntregue - totalCost;
-  const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
-  const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
-
-  const canEditObj = can('editObj');
-  const canAddTask = can('addTask');
-  const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
-  const isEditing = state._editingObjectives && state._editingObjectives.includes(String(o.id));
-  const filteredTasks = state._objStatus ? allTasks.filter(t => effectiveStatus(t) === state._objStatus) : allTasks;
-  const taskCountText = filteredTasks.length !== allTasks.length ? `${filteredTasks.length} de ${allTasks.length}` : `${allTasks.length}`;
-
-  return `
-  <div class="objective-card ${isOpen ? 'open' : ''}" id="obj-${o.id}" data-id="${o.id}">
-    
-    <div class="objective-header" onclick="toggleObjective('${o.id}')" style="align-items: flex-start; padding: 20px;">
-      
-      <div style="display:flex; gap:14px; flex: 1; min-width: 250px; flex-wrap: wrap;">
-        <span class="chevron" style="margin-top: 4px;">▶</span>
-        <span class="objective-num" style="margin-top: 2px;">${String(idx+1).padStart(2,'0')}</span>
-        
-        <div style="flex:1; min-width: 200px;">
-          ${isEditing ? `
-            <div style="display:flex; flex-direction: column; width: 100%;" onclick="event.stopPropagation()">
-              <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
-                     class="task-title-input"
-                     onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')"
-                     onblur="setTimeout(() => saveObjectiveTitle('${compId}','${o.id}'), 150)"
-                     onkeydown="if(event.key === 'Escape') cancelEditObjective('${o.id}', '${compId}')">
-            </div>
-          ` : `
-            <h3 style="font-size:16px; line-height:1.3; margin:0; word-break: break-word; ${canEditObj ? 'cursor:text; transition: color 0.2s;' : ''}" 
-                onclick="event.stopPropagation(); ${canEditObj ? `startEditObjective('${o.id}', '${compId}')` : ''}"
-                onmouseover="${canEditObj ? 'this.style.color=\'var(--primary)\'' : ''}" 
-                onmouseout="${canEditObj ? 'this.style.color=\'\'' : ''}">
-              ${escapeHtml(o.title)}
-            </h3>
-          `}
-
-          <div class="meta" style="margin-top: 8px; display:flex; gap:8px;">
-            <span id="meta-done-${o.id}" style="font-weight:600; color:var(--gray-500)">${done}/${allTasks.length} tarefas concluídas</span>
-            <span id="meta-late-${o.id}" class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; ${late === 0 ? 'display:none' : ''}">${late} em atraso</span>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top: 2px; text-align:center; justify-content:flex-end;">
-        <div style="display:flex; flex-direction:column;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
-          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
-        </div>
-        <div style="display:flex; flex-direction:column;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
-          <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
-        </div>
-        <div style="display:flex; flex-direction:column;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
-          <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
-        </div>
-        <div style="display:flex; flex-direction:column;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
-          <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
-        </div>
-        <div style="display:flex; flex-direction:column;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
-          <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
-        </div>
-        <div style="display:flex; flex-direction:column;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
-          <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
-        </div>
-      </div>
-    </div>
-    
-    <div class="objective-body">
-      <div class="savings-edit">
-        <label>Estimativa de economia mensal</label>
-        <div class="input-wrap">
-          <span>R$</span>
-          <input type="number" step="0.01" min="0" value="${o.monthlySavings}" ${canEditObj?'':'disabled'} onchange="updateSavings('${compId}','${o.id}', this.value)">
-        </div>
-        ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
-      </div>
-      <div class="tasks-header">
-        <h4>Tarefas <span class="count">${taskCountText}</span></h4>
-        ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
-      </div>
-      <div>
-        ${filteredTasks.length > 0 ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') : `<p style="color:var(--gray-500);font-size:12px;padding:12px;background:var(--gray-100);border-radius:6px;text-align:center">Nenhuma tarefa encontrada ${state._objStatus ? `com o status <strong>${state._objStatus}</strong>` : 'cadastrada'}.</p>`}
-      </div>
-      <div class="objective-totals">
-        <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
-        <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(resultadoEntregue)}</span></div>
-        <div class="t"><span class="label">Saldo Financeiro</span><span class="value ${saldo>=0?'pos':'neg'}">${fmtBRL(saldo)}</span></div>
-      </div>
-    </div>
-  </div>`;
-}
-
-function toggleObjective(id){ 
-  const el = $(`obj-${id}`);
-  if(!el) return;
-  if (el.classList.contains('open')) {
-    el.classList.remove('open');
-    if(state._openObjectives) state._openObjectives = state._openObjectives.filter(x => String(x) !== String(id));
-  } else {
-    el.classList.add('open');
-    if(!state._openObjectives) state._openObjectives = [];
-    if(!state._openObjectives.includes(String(id))) state._openObjectives.push(String(id));
   }
 }
 
 function startEditObjective(id, compId) {
   if (!state._editingObjectives) state._editingObjectives = [];
   if (!state._editingObjectives.includes(String(id))) state._editingObjectives.push(String(id));
-  refreshObjectiveDOM(id, compId);
+  renderObjectives();
   setTimeout(() => document.getElementById(`edit-obj-title-${id}`)?.focus(), 50);
 }
 
 function cancelEditObjective(id, compId) {
   if (state._editingObjectives) state._editingObjectives = state._editingObjectives.filter(x => String(x) !== String(id));
-  refreshObjectiveDOM(id, compId);
+  renderObjectives();
 }
 
 async function saveObjectiveTitle(compId, objId) {
@@ -263,7 +350,7 @@ async function saveObjectiveTitle(compId, objId) {
   
   const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
   if (o && o.title !== newTitle) await updateObjectiveTitle(compId, objId, newTitle);
-  else refreshObjectiveDOM(objId, compId);
+  else renderObjectives();
 }
 
 function openNewObjectiveModal(){
