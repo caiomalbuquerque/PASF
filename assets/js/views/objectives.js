@@ -86,6 +86,29 @@ function renderObjectivesListOnly(){
   elList.innerHTML = body;
 }
 
+function updateObjectiveDOM(objId, compId) {
+  const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
+  if (!o) return;
+
+  const card = document.getElementById(`obj-${objId}`);
+  if (card) {
+    // Descobre a posição correta do objetivo (para a numeração não bugar)
+    let objs = [...(state.objectives[compId] || [])];
+    objs.sort((a, b) => {
+      if (a.created_at && b.created_at) return new Date(a.created_at) - new Date(b.created_at);
+      return String(a.id).localeCompare(String(b.id));
+    });
+    const idx = objs.findIndex(x => String(x.id) === String(objId));
+
+    // Cria o HTML novo apenas deste cartão
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = objectiveHTML(o, idx, compId).trim();
+    
+    // Substitui o cartão velho pelo novo instantaneamente
+    card.replaceWith(tempDiv.firstElementChild);
+  }
+}
+
 function objectiveHTML(o, idx, compId){
   const allTasks = o.tasks;
   
