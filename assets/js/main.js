@@ -160,15 +160,14 @@ function initRealtime(){
       });
 
       if (foundAny) {
-        // Usa Debounce para não travar o navegador se 6 eventos chegarem juntos
         clearTimeout(realtimeRenderTimeout);
         realtimeRenderTimeout = setTimeout(() => {
           const activeView = document.querySelector('.nav-item.active')?.dataset.view;
           
-          console.log("🎨 Desenhando tela atualizada para o evento:", updatedTask.id);
-          
+          // Em vez de desenhar tudo, atualiza só o cartão da tarefa que mudou
           if (activeView === 'objetivos') {
-            renderObjectivesListOnly();
+            const found = findTask(updatedTask.id);
+            if(found) updateObjectiveDOM(found.objective.id, found.compId);
           } else if (activeView === 'dashboard') {
             renderDashboard();
           } else if (activeView === 'minhas') {
