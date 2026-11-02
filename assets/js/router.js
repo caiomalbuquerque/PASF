@@ -67,6 +67,7 @@ function renderTopbar(){
     `;
     $('topCompanySelect').onchange = (e) => {
       state.currentCompany = Number(e.target.value);
+      state.currentObjective = null; // Reseta o objetivo ao trocar de empresa
       renderTopbar();
       showView(document.querySelector('.nav-item.active')?.dataset.view || 'objetivos');
     };
@@ -82,6 +83,12 @@ function showView(viewId){
   const target = $('view-' + viewId);
   if(!target) return;
   target.classList.remove('hidden');
+
+  // SE CLICAR NO MENU LATERAL, VOLTA PARA A LISTA
+  if (viewId === 'objetivos') {
+    state.currentObjective = null; 
+  }
+
   if(viewId === 'dashboard')     renderDashboard();
   if(viewId === 'objetivos')     renderObjectives();
   if(viewId === 'minhas')        renderMyTasks();
