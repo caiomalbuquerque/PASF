@@ -13,22 +13,17 @@ function refreshTaskDOM(compId, objId, taskId) {
 
 function startEditTask(id, compId, objId) {
   if (!state._editingTasks) state._editingTasks = [];
-  if (!state._editingTasks.includes(String(id))) {
-    state._editingTasks.push(String(id));
-  }
+  if (!state._editingTasks.includes(String(id))) state._editingTasks.push(String(id));
   refreshTaskDOM(compId, objId, id);
   setTimeout(() => document.getElementById(`edit-task-title-${id}`)?.focus(), 50);
 }
 
 function cancelEditTask(id, compId, objId) {
-  if (state._editingTasks) {
-    state._editingTasks = state._editingTasks.filter(x => String(x) !== String(id));
-  }
+  if (state._editingTasks) state._editingTasks = state._editingTasks.filter(x => String(x) !== String(id));
   refreshTaskDOM(compId, objId, id);
 }
 
 async function saveTaskTitle(compId, taskId, objId) {
-  // Evita salvar duas vezes se o usuário apertou ESC
   if (!state._editingTasks || !state._editingTasks.includes(String(taskId))) return;
   
   const input = document.getElementById(`edit-task-title-${taskId}`);
@@ -37,10 +32,7 @@ async function saveTaskTitle(compId, taskId, objId) {
   const currentTask = findTask(taskId);
   if (!currentTask) return;
 
-  if (!newTitle) {
-    showToast("A descrição não pode ser vazia.", "error");
-    return;
-  }
+  if (!newTitle) { showToast("A descrição não pode ser vazia.", "error"); return; }
 
   state._editingTasks = state._editingTasks.filter(x => String(x) !== String(taskId));
   
@@ -64,46 +56,49 @@ function taskHTML(t, compId, objId){
 
   return `
   <div class="task-card ${isOpen ? 'open' : ''}" id="task-${t.id}" data-task-id="${t.id}"
-       draggable="true" 
-       ondragstart="handleDragStart(event, '${t.id}')" 
-       ondragend="handleDragEnd(event)"
-       ondragover="handleDragOver(event)"
-       ondrop="handleDrop(event, '${t.id}', '${objId}', '${compId}')">
+       draggable="true" ondragstart="handleDragStart(event, '${t.id}')" ondragend="handleDragEnd(event)"
+       ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${t.id}', '${objId}', '${compId}')">
     
-    <!-- Cabeçalho (Sempre visível) -->
+    <!-- Cabeçalho -->
     <div class="task-header" onclick="toggleTask('${t.id}')">
-      <span class="drag-handle" onclick="event.stopPropagation()" title="Arrastar para reordenar">⋮⋮</span>
-      <span class="chevron">▶</span>
-      <div class="task-summary">
+      <div class="task-summary" style="flex-wrap: wrap; align-items: flex-start;">
         
-        ${isEditingTask ? `
-          <input type="text" id="edit-task-title-${t.id}" value="${escapeHtml(t.description)}" 
-                 class="task-title-input" 
-                 onclick="event.stopPropagation()"
-                 onkeypress="if(event.key === 'Enter') saveTaskTitle('${compId}','${t.id}', '${objId}')"
-                 onblur="setTimeout(() => saveTaskTitle('${compId}','${t.id}', '${objId}'), 150)"
-                 onkeydown="if(event.key === 'Escape') cancelEditTask('${t.id}', '${compId}', '${objId}')">
-        ` : `
-          <span class="desc" 
-                onclick="event.stopPropagation(); ${edit ? `startEditTask('${t.id}', '${compId}', '${objId}')` : `toggleTask('${t.id}')`}" 
-                style="cursor: ${edit ? 'text' : 'pointer'}; transition: color 0.2s;"
-                onmouseover="${edit ? 'this.style.color=\'var(--primary)\'' : ''}" 
-                onmouseout="${edit ? 'this.style.color=\'\'' : ''}">
-            ${escapeHtml(descText)}
-          </span>
-        `}
-        
-        <span class="tag" style="background:${autoLate?'#fee2e2':'var(--gray-100)'};color:${autoLate?'#991b1b':'var(--gray-600)'}">${eff}</span>
+        <div style="display:flex; align-items:center; gap:10px; flex: 1 1 100%; min-width: 250px;">
+          <span class="drag-handle" onclick="event.stopPropagation()" title="Arrastar para reordenar">⋮⋮</span>
+          <span class="chevron">▶</span>
+          
+          ${isEditingTask ? `
+            <div style="flex: 1 1 100%;" onclick="event.stopPropagation()">
+              <input type="text" id="edit-task-title-${t.id}" value="${escapeHtml(t.description)}" 
+                     class="task-title-input" style="margin-top:0;"
+                     onkeypress="if(event.key === 'Enter') saveTaskTitle('${compId}','${t.id}', '${objId}')"
+                     onblur="setTimeout(() => saveTaskTitle('${compId}','${t.id}', '${objId}'), 150)"
+                     onkeydown="if(event.key === 'Escape') cancelEditTask('${t.id}', '${compId}', '${objId}')">
+            </div>
+          ` : `
+            <span class="desc" 
+                  onclick="event.stopPropagation(); ${edit ? `startEditTask('${t.id}', '${compId}', '${objId}')` : `toggleTask('${t.id}')`}" 
+                  style="cursor: ${edit ? 'text' : 'pointer'}; transition: color 0.2s; word-break: break-word;"
+                  onmouseover="${edit ? 'this.style.color=\'var(--primary)\'' : ''}" 
+                  onmouseout="${edit ? 'this.style.color=\'\'' : ''}">
+              ${escapeHtml(descText)}
+            </span>
+          `}
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-left: 44px; margin-top: 4px;">
+          <span class="tag" style="background:${autoLate?'#fee2e2':'var(--gray-100)'};color:${autoLate?'#991b1b':'var(--gray-600)'}">${eff}</span>
+        </div>
       </div>
+      
       <div class="task-actions" onclick="event.stopPropagation()">
         <button title="Histórico" onclick="openHistory('${t.id}')">◔</button>
         ${del ? `<button class="danger" title="Remover" onclick="removeTask('${compId}','${objId}','${t.id}')">✕</button>` : ''}
       </div>
     </div>
 
-    <!-- Corpo da Tarefa (Sem o campo de título duplicado) -->
+    <!-- Corpo da Tarefa -->
     <div class="task-body" onmousedown="this.closest('.task-card').draggable=false" onmouseup="this.closest('.task-card').draggable=true">
-      
       <div class="task-grid">
         <div class="task-field">
           <label>Responsável</label>
@@ -161,7 +156,6 @@ function taskHTML(t, compId, objId){
 function toggleTask(id) {
   const el = $(`task-${id}`);
   if (!el) return;
-  
   if (el.classList.contains('open')) {
     el.classList.remove('open');
     if (state._openTasks) state._openTasks = state._openTasks.filter(x => x !== id);
@@ -173,7 +167,6 @@ function toggleTask(id) {
 }
 
 function openHistory(taskId){
-  // ... (Mantenha a função openHistory exatamente como estava)
   const entries = historyFor(taskId);
   const found = findTask(taskId);
   const title = found ? (found.task.description || '(sem descrição)') : 'Tarefa';
