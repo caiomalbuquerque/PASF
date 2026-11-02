@@ -59,11 +59,8 @@ function renderObjectivesListOnly(){
   comps.forEach(comp => {
     let objs = [...(state.objectives[comp.id] || [])];
     
-    // Ordena sempre pela data de criação (ou ID, se created_at não existir)
     objs.sort((a, b) => {
-      if (a.created_at && b.created_at) {
-        return new Date(a.created_at) - new Date(b.created_at);
-      }
+      if (a.created_at && b.created_at) return new Date(a.created_at) - new Date(b.created_at);
       return String(a.id).localeCompare(String(b.id));
     });
     if(search) objs = objs.filter(o => o.title.toLowerCase().includes(search));
@@ -86,51 +83,62 @@ function renderObjectivesListOnly(){
   elList.innerHTML = body;
 }
 
-function updateObjectiveDOM(objId, compId) {
+/* FUNÇÃO NOVA E ULTRA RÁPIDA: Atualiza apenas os textos, sem destruir o HTML */
+function updateObjectiveMetrics(objId, compId) {
   const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
   if (!o) return;
 
-  const card = document.getElementById(`obj-${objId}`);
-  if (card) {
-    // Descobre a posição correta do objetivo (para a numeração não bugar)
-    let objs = [...(state.objectives[compId] || [])];
-    objs.sort((a, b) => {
-      if (a.created_at && b.created_at) return new Date(a.created_at) - new Date(b.created_at);
-      return String(a.id).localeCompare(String(b.id));
-    });
-    const idx = objs.findIndex(x => String(x.id) === String(objId));
+  const allTasks = o.tasks;
+  const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
+  const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
+  
+  const estMensal = +o.monthlySavings || 0;
+  const resultadoEntregue = allTasks.filter(t => effectiveStatus(t) === 'Concluída').reduce((s,t) => s + (+t.result||0), 0);
+  const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
+  const saldo = resultadoEntregue - totalCost;
+  
+  const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
+  const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
 
-    // Cria o HTML novo apenas deste cartão
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = objectiveHTML(o, idx, compId).trim();
-    
-    // Substitui o cartão velho pelo novo instantaneamente
-    card.replaceWith(tempDiv.firstElementChild);
+  // Atualiza os elementos específicos no DOM
+  const elDone = $(`meta-done-${objId}`);
+  if (elDone) elDone.textContent = `${done}/${allTasks.length} tarefas concluídas`;
+
+  const elLate = $(`meta-late-${objId}`);
+  if (elLate) elLate.textContent = late > 0 ? `${late} em atraso` : '';
+
+  const elEntregue = $(`metric-entregue-${objId}`);
+  if (elEntregue) elEntregue.textContent = resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—';
+
+  const elCost = $(`metric-cost-${objId}`);
+  if (elCost) elCost.textContent = totalCost > 0 ? fmtBRL(totalCost) : '—';
+
+  const elSaldo = $(`metric-saldo-${objId}`);
+  if (elSaldo) {
+    elSaldo.textContent = saldo !== 0 ? fmtBRL(saldo) : '—';
+    elSaldo.style.color = saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)';
+  }
+
+  const elPctRealizado = $(`metric-pct-${objId}`);
+  if (elPctRealizado) elPctRealizado.textContent = `${pctRealizado.toFixed(1)}%`;
+
+  const elPctPendente = $(`metric-pend-${objId}`);
+  if (elPctPendente) {
+    elPctPendente.textContent = `${pctPendente.toFixed(1)}%`;
+    elPctPendente.style.color = pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)';
   }
 }
 
 function objectiveHTML(o, idx, compId){
   const allTasks = o.tasks;
-  
-  // Cálculos de Status e Tarefas
   const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
   const late = allTasks.filter(t => effectiveStatus(t) === 'Atrasada').length;
   
-  // Cálculos Financeiros
   const estMensal = +o.monthlySavings || 0;
-  
-  // O valor "Entregue" soma apenas os resultados das tarefas CONCLUÍDAS
-  const resultadoEntregue = allTasks
-    .filter(t => effectiveStatus(t) === 'Concluída')
-    .reduce((s,t) => s + (+t.result||0), 0);
-    
-  // O Custo soma todas as tarefas
+  const resultadoEntregue = allTasks.filter(t => effectiveStatus(t) === 'Concluída').reduce((s,t) => s + (+t.result||0), 0);
   const totalCost = allTasks.reduce((s,t) => s + (+t.cost||0), 0);
-  
-  // Saldo é Entregue - Custo
   const saldo = resultadoEntregue - totalCost;
   
-  // Porcentagens baseadas na Estimativa Mensal
   const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
   const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
 
@@ -140,7 +148,6 @@ function objectiveHTML(o, idx, compId){
   const isOpen = state._openObjectives && state._openObjectives.includes(String(o.id));
   const isEditing = state._editingObjectives && state._editingObjectives.includes(String(o.id));
 
-  // Filtro de status do topo da página
   const filteredTasks = state._objStatus 
     ? allTasks.filter(t => effectiveStatus(t) === state._objStatus)
     : allTasks;
@@ -152,10 +159,8 @@ function objectiveHTML(o, idx, compId){
   return `
   <div class="objective-card ${isOpen ? 'open' : ''}" id="obj-${o.id}" data-id="${o.id}">
     
-    <!-- CABEÇALHO REPROJETADO -->
     <div class="objective-header" onclick="toggleObjective('${o.id}')" style="align-items: flex-start; padding: 20px;">
       
-      <!-- Coluna 1: Chevron, Número, Título e Meta -->
       <div style="display:flex; gap:14px; flex: 1; min-width: 250px;">
         <span class="chevron" style="margin-top: 4px;">▶</span>
         <span class="objective-num" style="margin-top: 2px;">${String(idx+1).padStart(2,'0')}</span>
@@ -176,15 +181,13 @@ function objectiveHTML(o, idx, compId){
             </div>
           `}
 
-          <!-- TEXTO DE TAREFAS CONCLUÍDAS -->
-          <div class="meta" style="margin-top: 8px;">
-            <span style="font-weight:600; color:var(--gray-500)">${done}/${allTasks.length} tarefas concluídas</span>
-            ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; margin-left: 6px">${late} em atraso</span>` : ''}
+          <div class="meta" style="margin-top: 8px; display:flex; gap:8px;">
+            <span id="meta-done-${o.id}" style="font-weight:600; color:var(--gray-500)">${done}/${allTasks.length} tarefas concluídas</span>
+            <span id="meta-late-${o.id}" class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; ${late === 0 ? 'display:none' : ''}">${late} em atraso</span>
           </div>
         </div>
       </div>
 
-      <!-- Coluna 2, 3, 4, 5, 6: Métricas Financeiras -->
       <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top: 2px; text-align:center; justify-content:flex-end;">
         
         <div style="display:flex; flex-direction:column;">
@@ -194,33 +197,32 @@ function objectiveHTML(o, idx, compId){
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
-          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
+          <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
-          <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
+          <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
-          <span style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
+          <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
-          <span style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
+          <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
         </div>
 
         <div style="display:flex; flex-direction:column;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
-          <span style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
+          <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
         </div>
 
       </div>
     </div>
     
-    <!-- CORPO EXPANDIDO (Oculto por padrão) -->
     <div class="objective-body">
       <div class="savings-edit">
         <label>Estimativa de economia mensal</label>
@@ -278,7 +280,6 @@ function startEditObjective(id) {
     state._editingObjectives.push(String(id));
   }
   renderObjectivesListOnly();
-  // Foca o input automaticamente
   setTimeout(() => document.getElementById(`edit-obj-title-${id}`)?.focus(), 50);
 }
 
@@ -299,10 +300,7 @@ async function saveObjectiveTitle(compId, objId) {
     return;
   }
   
-  // Atualiza no banco
   await updateObjectiveTitle(compId, objId, newTitle);
-  
-  // Remove o estado de edição e re-renderiza
   cancelEditObjective(objId);
 }
 
