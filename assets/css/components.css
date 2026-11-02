@@ -214,16 +214,18 @@ select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg)
 
 /* Campo de edição Inline (Click-to-Edit) */
 .task-title-input {
-  flex: 1;
-  padding: 4px 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box; /* Impede que o padding estoure a largura */
+  padding: 6px 12px;
   border: 1px solid var(--primary);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--gray-800);
   outline: none;
   background: #fff;
   box-shadow: 0 0 0 3px rgba(15,76,129,.1);
   font-family: inherit;
-  min-width: 250px;
+  margin-top: 4px;
 }
