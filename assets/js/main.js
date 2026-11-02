@@ -144,7 +144,11 @@ function initRealtime(){
           
           if (activeView === 'objetivos') {
             const found = findTask(updatedTask.id);
-            if(found) updateObjectiveMetrics(found.objective.id, found.compId); // <-- MUDOU AQUI
+            if(found) updateObjectiveMetrics(found.objective.id, found.compId);
+            // Se estiver na tela de detalhes daquele objetivo, atualiza a lista de tarefas
+            if (state.currentObjective && String(state.currentObjective) === String(found.objective.id)) {
+               renderObjectives(); 
+            }
           } else if (activeView === 'dashboard') {
             renderDashboard();
           } else if (activeView === 'minhas') {
@@ -170,7 +174,7 @@ function initRealtime(){
           realtimeObjTimeout = setTimeout(() => {
             const activeView = document.querySelector('.nav-item.active')?.dataset.view;
             if (activeView === 'objetivos') {
-              updateObjectiveMetrics(updatedObj.id, compId); // <-- MUDOU AQUI
+              renderObjectives(); // Redesenha a tela de lista ou de detalhes
             }
           }, 150);
         }
