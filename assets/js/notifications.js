@@ -84,22 +84,27 @@ async function openNotif(notifId){
   if(n.taskId){
     const found = findTask(n.taskId);
     if(found){
-      state.currentCompany = found.compId;
-      const compSelect = $('companySelect');
-      if(compSelect) compSelect.value = found.compId;
-      
+      // ✔ CORRIGIDO: Number() evita que state.currentCompany vire string,
+      // quebrando comparações estritas em renderUsers / permissões.
+      state.currentCompany = Number(found.compId);
+      renderTopbar(); // ✔ CORRIGIDO: sincroniza o seletor de empresa da topbar
+
       showView('objetivos');
 
       setTimeout(() => {
         const objEl = $(`obj-${found.objective.id}`);
-        if(objEl && !objEl.classList.contains('open')) toggleObjective(found.objective.id);
+        if(objEl && !objEl.classList.contains('open') && typeof toggleObjective === 'function'){
+          toggleObjective(found.objective.id);
+        }
 
         const taskEl = $(`task-${n.taskId}`);
         if(taskEl && !taskEl.classList.contains('open')) toggleTask(n.taskId);
 
         taskEl?.scrollIntoView({behavior:'smooth', block:'center'});
 
-        if (n.targetField) {
+        // ✔ CORRIGIDO: guarda contra taskEl nulo (evita TypeError
+        // quando a tarefa não está renderizada na lista).
+        if (n.targetField && taskEl) {
           setTimeout(() => {
             const targetInput = taskEl.querySelector(`[data-field="${n.targetField}"]`);
             if (targetInput) {
