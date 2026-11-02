@@ -43,6 +43,20 @@ async function saveTaskTitle(compId, taskId, objId) {
 }
 
 function taskHTML(t, compId, objId){
+  // ✔ NOVO: se a tarefa ainda está sendo criada no banco, mostra versão bloqueada
+  if (t._pending) {
+    return `
+      <div class="task-card" id="task-${t.id}" style="opacity:.55; pointer-events:none;">
+        <div class="task-header" style="padding:14px">
+          <div class="task-summary" style="flex:1">
+            <span class="chevron" style="color:var(--gray-300)">▶</span>
+            <span class="desc">${escapeHtml(t.description || '(nova tarefa)')}</span>
+            <span class="tag" style="background:var(--status-todo-bg);color:var(--status-todo-text)">Salvando…</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
   const users = usersOfCompany(compId);
   const edit = can('editTask');
   const del = can('delTask');
@@ -59,7 +73,6 @@ function taskHTML(t, compId, objId){
        draggable="true" ondragstart="handleDragStart(event, '${t.id}')" ondragend="handleDragEnd(event)"
        ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${t.id}', '${objId}', '${compId}')">
     
-    <!-- Cabeçalho -->
     <div class="task-header" onclick="toggleTask('${t.id}')">
       <div class="task-summary" style="flex-wrap: wrap; align-items: flex-start;">
         
@@ -97,7 +110,6 @@ function taskHTML(t, compId, objId){
       </div>
     </div>
 
-    <!-- Corpo da Tarefa -->
     <div class="task-body" onmousedown="this.closest('.task-card').draggable=false" onmouseup="this.closest('.task-card').draggable=true">
       <div class="task-grid">
         <div class="task-field">
