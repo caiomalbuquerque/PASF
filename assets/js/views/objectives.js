@@ -43,17 +43,13 @@ function renderObjectives(){
   renderObjectivesListOnly();
 }
 
+// ✔ CORRIGIDO: versão única — guarda contra objetivo ainda "pending"
+// (a duplicata abaixo, que sobrescrevia essa função, foi removida).
 function openObjectiveDetail(objId) {
-  // ✔ NOVO: bloqueia clique em objetivo ainda "pending"
   if (String(objId).startsWith('temp_')) {
     showToast("Aguarde — objetivo ainda sendo criado…", "info");
     return;
   }
-  state.currentObjective = objId;
-  renderObjectives();
-}
-
-function openObjectiveDetail(objId) {
   state.currentObjective = objId;
   renderObjectives();
 }
