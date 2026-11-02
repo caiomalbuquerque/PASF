@@ -25,7 +25,7 @@ function cancelEditTask(id, compId, objId) {
 
 async function saveTaskTitle(compId, taskId, objId) {
   if (!state._editingTasks || !state._editingTasks.includes(String(taskId))) return;
-  
+
   const input = document.getElementById(`edit-task-title-${taskId}`);
   if (!input) return;
   const newTitle = input.value.trim();
@@ -35,7 +35,7 @@ async function saveTaskTitle(compId, taskId, objId) {
   if (!newTitle) { showToast("A descrição não pode ser vazia.", "error"); return; }
 
   state._editingTasks = state._editingTasks.filter(x => String(x) !== String(taskId));
-  
+
   if (newTitle !== currentTask.task.description) {
     await updateTask(compId, taskId, 'description', newTitle);
   }
@@ -44,27 +44,32 @@ async function saveTaskTitle(compId, taskId, objId) {
 
 function taskHTML(t, compId, objId){
   const users = usersOfCompany(compId);
-  const edit = can('editTask');
+  const canDrag = can('addTask') || can('editObj');
   const del = can('delTask');
-  const descEdit = can('editObj') || can('addTask');
+
+  // ⭐ Regra real: unique_user só edita as próprias tarefas
+  const isUniqueUser = state.currentUser.role === 'unique_user';
+  const isOwnTask = String(t.responsibleId) === String(state.currentUser.id);
+  const edit = can('editTask') && (!isUniqueUser || isOwnTask);
+
   const eff = effectiveStatus(t);
   const autoLate = eff === 'Atrasada' && t.status !== 'Atrasada';
-  
+
   const isOpen = state._openTasks && state._openTasks.includes(String(t.id));
   const isEditingTask = state._editingTasks && state._editingTasks.includes(String(t.id));
   const descText = t.description || '(Nova tarefa sem descrição)';
 
   return `
   <div class="task-card ${isOpen ? 'open' : ''}" id="task-${t.id}" data-task-id="${t.id}"
-       draggable="true" ondragstart="handleDragStart(event, '${t.id}')" ondragend="handleDragEnd(event)"
+       draggable="${canDrag ? 'true' : 'false'}"
+       ondragstart="handleDragStart(event, '${t.id}')" ondragend="handleDragEnd(event)"
        ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${t.id}', '${objId}', '${compId}')">
     
-    <!-- Cabeçalho -->
     <div class="task-header" onclick="toggleTask('${t.id}')">
       <div class="task-summary" style="flex-wrap: wrap; align-items: flex-start;">
         
         <div style="display:flex; align-items:center; gap:10px; flex: 1 1 100%; min-width: 250px;">
-          <span class="drag-handle" onclick="event.stopPropagation()" title="Arrastar para reordenar">⋮⋮</span>
+          ${canDrag ? `<span class="drag-handle" onclick="event.stopPropagation()" title="Arrastar para reordenar">⋮⋮</span>` : ''}
           <span class="chevron">▶</span>
           
           ${isEditingTask ? `
@@ -97,13 +102,12 @@ function taskHTML(t, compId, objId){
       </div>
     </div>
 
-    <!-- Corpo da Tarefa -->
-    <div class="task-body" onmousedown="this.closest('.task-card').draggable=false" onmouseup="this.closest('.task-card').draggable=true">
+    <div class="task-body" onmousedown="this.closest('.task-card').draggable=false" onmouseup="this.closest('.task-card').draggable=${canDrag ? 'true' : 'false'}">
       <div class="task-grid">
         <div class="task-field">
           <label>Responsável</label>
           <select data-field="responsibleId" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','responsibleId',this.value)">
-            ${users.map(u => `<option value="${u.id}" ${u.id===t.responsibleId?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
+            ${users.map(u => `<option value="${u.id}" ${String(u.id)===String(t.responsibleId)?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
           </select>
         </div>
         <div class="task-field">
@@ -122,11 +126,11 @@ function taskHTML(t, compId, objId){
         </div>
         <div class="task-field">
           <label>Custo (R$)</label>
-          <input type="number" data-field="cost" step="0.01" min="0" value="${t.cost||''}" placeholder="0,00" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','cost',this.value)">
+          <input type="number" data-field="cost" step="0.01" min="0" value="${t.cost ?? ''}" placeholder="0,00" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','cost',this.value)">
         </div>
         <div class="task-field">
           <label>Resultado (R$)</label>
-          <input type="number" data-field="result" step="0.01" min="0" value="${t.result||''}" placeholder="0,00" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','result',this.value)">
+          <input type="number" data-field="result" step="0.01" min="0" value="${t.result ?? ''}" placeholder="0,00" ${edit?'':'disabled'} onchange="updateTask('${compId}','${t.id}','result',this.value)">
         </div>
         <div class="task-field full">
           <label>Observações</label>
