@@ -26,5 +26,3 @@
 .reset-demo{margin-top:18px;width:100%;padding:8px;font-size:11px;color:var(--gray-500);border-radius:6px;
   border:1px dashed var(--gray-300);transition:var(--transition)}
 .reset-demo:hover{color:var(--danger);border-color:var(--danger)}
-
-.login-info{background:#d1fae5;color:#065f46;padding:8px 12px;border-radius:6px;font-size:12px;margin-top:12px}

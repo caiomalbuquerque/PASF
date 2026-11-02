@@ -1,12 +1,10 @@
 /* assets/js/services/users.js */
 
-const userById = id => state.users.find(u => String(u.id) === String(id));
-const companyById = id => state.companies.find(c => String(c.id) === String(id));
+const userById = id => state.users.find(u => u.id === id);
+const companyById = id => state.companies.find(c => c.id === Number(id));
 
 function usersOfCompany(companyId){
-  return state.users.filter(u =>
-    !u.companyId || String(u.companyId) === String(companyId)
-  );
+  return state.users.filter(u => u.companyId === companyId || !u.companyId);
 }
 
 function allTasksFlat(){

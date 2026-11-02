@@ -33,16 +33,8 @@ function renderObjectives(){
     `;
     el.innerHTML = headerHTML;
 
-    let _searchDebounce;
-    $('searchObj')?.addEventListener('input', e => {
-      state._objSearch = e.target.value;
-      clearTimeout(_searchDebounce);
-      _searchDebounce = setTimeout(() => renderObjectivesListOnly(), 200);
-    });
-    $('filterStatus')?.addEventListener('change', e => {
-      state._objStatus = e.target.value;
-      renderObjectivesListOnly();
-    });
+    $('searchObj')?.addEventListener('input', e => { state._objSearch = e.target.value; renderObjectives(); });
+    $('filterStatus')?.addEventListener('change', e => { state._objStatus = e.target.value; renderObjectives(); });
   } else {
     const searchInput = $('searchObj');
     if(searchInput && searchInput.value !== (state._objSearch || '')){ searchInput.value = state._objSearch || ''; }
