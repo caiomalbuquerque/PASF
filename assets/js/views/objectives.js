@@ -83,7 +83,6 @@ function renderObjectivesListOnly(){
   elList.innerHTML = body;
 }
 
-/* FUNÇÃO NOVA E ULTRA RÁPIDA: Atualiza apenas os textos, sem destruir o HTML */
 function updateObjectiveMetrics(objId, compId) {
   const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
   if (!o) return;
@@ -100,7 +99,6 @@ function updateObjectiveMetrics(objId, compId) {
   const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
   const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
 
-  // Atualiza os elementos específicos no DOM
   const elDone = $(`meta-done-${objId}`);
   if (elDone) elDone.textContent = `${done}/${allTasks.length} tarefas concluídas`;
 
@@ -126,6 +124,25 @@ function updateObjectiveMetrics(objId, compId) {
   if (elPctPendente) {
     elPctPendente.textContent = `${pctPendente.toFixed(1)}%`;
     elPctPendente.style.color = pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)';
+  }
+}
+
+function refreshObjectiveDOM(objId, compId) {
+  const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
+  if (!o) return;
+
+  const card = document.getElementById(`obj-${objId}`);
+  if (card) {
+    let objs = [...(state.objectives[compId] || [])];
+    objs.sort((a, b) => {
+      if (a.created_at && b.created_at) return new Date(a.created_at) - new Date(b.created_at);
+      return String(a.id).localeCompare(String(b.id));
+    });
+    const idx = objs.findIndex(x => String(x.id) === String(objId));
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = objectiveHTML(o, idx, compId).trim();
+    card.replaceWith(tempDiv.firstElementChild);
   }
 }
 
@@ -169,15 +186,19 @@ function objectiveHTML(o, idx, compId){
           ${isEditing ? `
             <div style="display:flex; align-items:center; gap:8px;" onclick="event.stopPropagation()">
               <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
-                     class="task-desc" style="margin:0; width:100%; max-width:400px; font-size:15px; padding:4px 8px; height:32px;"
-                     onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')">
-              <button class="btn btn-sm btn-primary" style="padding:4px 10px; height:32px;" onclick="saveObjectiveTitle('${compId}','${o.id}')" title="Salvar">✓</button>
-              <button class="btn btn-sm btn-ghost" style="padding:4px 10px; height:32px;" onclick="cancelEditObjective('${o.id}')" title="Cancelar">✕</button>
+                     class="task-title-input" style="max-width:500px; height:32px; font-size:15px;"
+                     onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')"
+                     onblur="setTimeout(() => saveObjectiveTitle('${compId}','${o.id}'), 150)"
+                     onkeydown="if(event.key === 'Escape') cancelEditObjective('${o.id}', '${compId}')">
             </div>
           ` : `
             <div style="display:flex; align-items:flex-start; gap:8px;">
-              <h3 style="font-size:16px; line-height:1.3; margin:0;">${escapeHtml(o.title)}</h3>
-              ${canEditObj ? `<button class="btn btn-sm btn-ghost" style="padding:2px 6px; color:var(--gray-400);" onclick="event.stopPropagation(); startEditObjective('${o.id}')" title="Editar nome">✎</button>` : ''}
+              <h3 style="font-size:16px; line-height:1.3; margin:0; ${canEditObj ? 'cursor:text; transition: color 0.2s;' : ''}" 
+                  onclick="event.stopPropagation(); ${canEditObj ? `startEditObjective('${o.id}', '${compId}')` : ''}"
+                  onmouseover="${canEditObj ? 'this.style.color=\'var(--primary)\'' : ''}" 
+                  onmouseout="${canEditObj ? 'this.style.color=\'\'' : ''}">
+                ${escapeHtml(o.title)}
+              </h3>
             </div>
           `}
 
@@ -233,10 +254,12 @@ function objectiveHTML(o, idx, compId){
         </div>
         ${canEditObj ? `<button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="deleteObjective('${compId}','${o.id}')">🗑 Remover objetivo</button>` : ''}
       </div>
+      
       <div class="tasks-header">
         <h4>Tarefas <span class="count">${taskCountText}</span></h4>
         ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
       </div>
+      
       <div>
         ${filteredTasks.length > 0 
           ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
@@ -245,6 +268,7 @@ function objectiveHTML(o, idx, compId){
              </p>`
         }
       </div>
+      
       <div class="objective-totals">
         <div class="t"><span class="label">Custo total</span><span class="value">${fmtBRL(totalCost)}</span></div>
         <div class="t"><span class="label">Resultado atingido</span><span class="value pos">${fmtBRL(resultadoEntregue)}</span></div>
@@ -274,23 +298,25 @@ function toggleObjective(id){
 
 /* --- LÓGICA DE EDIÇÃO DO TÍTULO --- */
 
-function startEditObjective(id) {
+function startEditObjective(id, compId) {
   if (!state._editingObjectives) state._editingObjectives = [];
   if (!state._editingObjectives.includes(String(id))) {
     state._editingObjectives.push(String(id));
   }
-  renderObjectivesListOnly();
+  refreshObjectiveDOM(id, compId);
   setTimeout(() => document.getElementById(`edit-obj-title-${id}`)?.focus(), 50);
 }
 
-function cancelEditObjective(id) {
+function cancelEditObjective(id, compId) {
   if (state._editingObjectives) {
     state._editingObjectives = state._editingObjectives.filter(x => String(x) !== String(id));
   }
-  renderObjectivesListOnly();
+  refreshObjectiveDOM(id, compId);
 }
 
 async function saveObjectiveTitle(compId, objId) {
+  if (!state._editingObjectives || !state._editingObjectives.includes(String(objId))) return;
+  
   const input = document.getElementById(`edit-obj-title-${objId}`);
   if (!input) return;
   const newTitle = input.value.trim();
@@ -300,8 +326,14 @@ async function saveObjectiveTitle(compId, objId) {
     return;
   }
   
-  await updateObjectiveTitle(compId, objId, newTitle);
-  cancelEditObjective(objId);
+  state._editingObjectives = state._editingObjectives.filter(x => String(x) !== String(objId));
+  
+  const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
+  if (o && o.title !== newTitle) {
+    await updateObjectiveTitle(compId, objId, newTitle);
+  } else {
+    refreshObjectiveDOM(objId, compId);
+  }
 }
 
 function openNewObjectiveModal(){
