@@ -10,11 +10,13 @@ function effectiveStatus(task){
   return task.status;
 }
 
+// ✔ CORRIGIDO: retorna compId como Number para não propagar string
+// para state.currentCompany (usado em comparações estritas).
 function findTask(taskId){
   for(const compId in state.objectives){
     for(const o of state.objectives[compId]){
       const t = o.tasks.find(x => String(x.id) === String(taskId));
-      if(t) return { compId, objective:o, task:t };
+      if(t) return { compId: Number(compId), objective:o, task:t };
     }
   }
   return null;
@@ -42,7 +44,6 @@ async function updateTask(compId, taskId, field, value){
 
   found.task[field] = value;
   
-  // CHAMADA DA FUNÇÃO LEVE AQUI
   updateObjectiveMetrics(found.objective.id, compId);
 
   if (field !== 'created_at' && field !== 'updated_at') {
