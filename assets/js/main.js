@@ -75,7 +75,12 @@
     });
 
     state.currentUser = user;
-    state.currentCompany = (user.companyId ? user.companyId : state.companies[0]?.id) || null;
+
+    // ✔ CORRIGIDO: garante que currentCompany seja sempre Number (ou null).
+    // Antes, dependendo da origem, podia vir string e quebrar comparações
+    // estritas (===) em permissões, filtros e renderUsers.
+    const rawCompanyId = user.companyId ?? state.companies[0]?.id ?? null;
+    state.currentCompany = rawCompanyId != null ? Number(rawCompanyId) : null;
 
     if (loadingEl) loadingEl.style.display = 'none';
     if (appEl) appEl.classList.remove('hidden');
@@ -145,7 +150,6 @@ function initRealtime(){
           if (activeView === 'objetivos') {
             const found = findTask(updatedTask.id);
             if(found) updateObjectiveMetrics(found.objective.id, found.compId);
-            // Se estiver na tela de detalhes daquele objetivo, atualiza a lista de tarefas
             if (state.currentObjective && String(state.currentObjective) === String(found.objective.id)) {
                renderObjectives(); 
             }
@@ -174,7 +178,7 @@ function initRealtime(){
           realtimeObjTimeout = setTimeout(() => {
             const activeView = document.querySelector('.nav-item.active')?.dataset.view;
             if (activeView === 'objetivos') {
-              renderObjectives(); // Redesenha a tela de lista ou de detalhes
+              renderObjectives();
             }
           }, 150);
         }
