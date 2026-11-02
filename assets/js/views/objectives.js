@@ -44,6 +44,16 @@ function renderObjectives(){
 }
 
 function openObjectiveDetail(objId) {
+  // ✔ NOVO: bloqueia clique em objetivo ainda "pending"
+  if (String(objId).startsWith('temp_')) {
+    showToast("Aguarde — objetivo ainda sendo criado…", "info");
+    return;
+  }
+  state.currentObjective = objId;
+  renderObjectives();
+}
+
+function openObjectiveDetail(objId) {
   state.currentObjective = objId;
   renderObjectives();
 }
