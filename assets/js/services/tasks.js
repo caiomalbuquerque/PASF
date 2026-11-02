@@ -10,7 +10,6 @@ function effectiveStatus(task){
   return task.status;
 }
 
-// ✔ CORRIGIDO: compId como Number para não propagar string
 function findTask(taskId){
   for(const compId in state.objectives){
     for(const o of state.objectives[compId]){
@@ -30,15 +29,11 @@ async function updateTask(compId, taskId, field, value){
   const found = findTask(taskId);
   if(!found) return;
 
-  // ✔ CORRIGIDO: bloqueia edição em tarefa ainda sendo criada
   if (String(taskId).startsWith('temp_')) return;
   
   const oldValue = found.task[field];
   if(String(oldValue||'') === String(value||'')) return;
   
-  // ✔ CORRIGIDO (optimistic): atualiza o estado LOCAL imediatamente.
-  // O DOM do campo já está com o novo valor (veio do evento change).
-  // Isso faz o realtime de eco ser detectado como "mesmo valor" e não re-renderizar.
   found.task[field] = value;
   updateObjectiveMetrics(found.objective.id, compId);
 
@@ -48,7 +43,6 @@ async function updateTask(compId, taskId, field, value){
 
   const { error } = await window.db.from('tasks').update({ [dbField]: value || null }).eq('id', taskId);
 
-  // ✔ CORRIGIDO: rollback se o banco rejeitar
   if (error) {
     found.task[field] = oldValue;
     updateObjectiveMetrics(found.objective.id, compId);
@@ -56,7 +50,6 @@ async function updateTask(compId, taskId, field, value){
     return;
   }
 
-  // Auditoria e notificações continuam fire-and-forget (não bloqueiam a UI)
   if (field !== 'created_at' && field !== 'updated_at') {
     window.db.from('audit_logs').insert([{
       task_id: taskId,
@@ -99,14 +92,13 @@ async function addTask(compId, objId){
   const firstUser = state.users.find(u => Number(u.companyId) === Number(compId));
   const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
   
-  // ✔ CORRIGIDO (optimistic): cria local com ID temporário e mostra imediatamente
   const tempId = 'temp_' + uid();
   const tempTask = {
     id: tempId,
     objective_id: objId,
     description: '',
     responsibleId: firstUser?.id || null,
-    status: 'A Iniciar',
+    status: 'A iniciar',           // ajuste se seu STATUS_OPTIONS usar capitalização diferente
     sort_order: maxOrder + 1,
     attachments: [],
     _pending: true
@@ -114,12 +106,14 @@ async function addTask(compId, objId){
   
   o.tasks.push(tempTask);
   
-  if(!state._openObjectives) state._openObjectives = [];
-  if(!state._openObjectives.includes(String(objId))) state._openObjectives.push(String(objId));
+  // ✔ CORRIGIDO: abre a nova tarefa automaticamente para o usuário editar
+  if(!state._openTasks) state._openTasks = [];
+  if(!state._openTasks.includes(String(tempId))) state._openTasks.push(String(tempId));
+
+  // ✔ CORRIGIDO: renderObjectives() em vez de renderObjectivesListOnly()
+  // (esta última é no-op na tela de detalhe do objetivo)
+  renderObjectives();
   
-  renderObjectivesListOnly();
-  
-  // Sincroniza no banco em background
   const { data, error } = await window.db.from('tasks').insert([{
     objective_id: objId,
     description: '',
@@ -129,14 +123,13 @@ async function addTask(compId, objId){
   }]).select().single();
   
   if (error) {
-    // Rollback
     o.tasks = o.tasks.filter(t => t.id !== tempId);
-    renderObjectivesListOnly();
+    if (state._openTasks) state._openTasks = state._openTasks.filter(x => String(x) !== String(tempId));
+    renderObjectives();
     showToast("Erro ao criar tarefa: " + error.message, "error");
     return;
   }
   
-  // Substitui o temp pelo registro real
   const idx = o.tasks.findIndex(t => t.id === tempId);
   if (idx >= 0) {
     o.tasks[idx] = {
@@ -147,7 +140,13 @@ async function addTask(compId, objId){
       attachments: []
     };
   }
-  renderObjectivesListOnly();
+
+  // ✔ CORRIGIDO: migra o ID aberto de temp para o real
+  if (state._openTasks) {
+    state._openTasks = state._openTasks.map(x => String(x) === String(tempId) ? String(data.id) : x);
+  }
+
+  renderObjectives();
 }
 
 async function removeTask(compId, objId, taskId){
@@ -155,15 +154,17 @@ async function removeTask(compId, objId, taskId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(!o) return;
 
-  // ✔ CORRIGIDO (optimistic): remove da UI imediatamente
   const backup = o.tasks.slice();
   o.tasks = o.tasks.filter(t => t.id !== taskId);
-  renderObjectivesListOnly();
+
+  // ✔ CORRIGIDO: renderObjectives() em vez de renderObjectivesListOnly()
+  // — esta é a correção do bug "tarefa continua visível após excluir"
+  renderObjectives();
 
   const { error } = await window.db.from('tasks').delete().eq('id', taskId);
   if (error) {
     o.tasks = backup;
-    renderObjectivesListOnly();
+    renderObjectives();
     showToast("Erro ao remover tarefa: " + error.message, "error");
     return;
   }
@@ -207,7 +208,7 @@ async function addAttachments(compId, taskId, input){
     }
   }
   input.value = '';
-  renderObjectivesListOnly();
+  renderObjectives(); // ✔ CORRIGIDO
   showToast("Anexo(s) enviado(s)!", "success");
 }
 
@@ -224,7 +225,7 @@ async function removeAttachment(compId, taskId, attachId){
   if (error) { showToast("Erro ao deletar anexo.", "error"); return; }
   
   found.task.attachments = found.task.attachments.filter(a => a.id !== attachId);
-  renderObjectivesListOnly();
+  renderObjectives(); // ✔ CORRIGIDO
   showToast("Anexo removido.", "success");
 }
 
