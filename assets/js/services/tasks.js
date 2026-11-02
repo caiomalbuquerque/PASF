@@ -37,17 +37,14 @@ async function updateTask(compId, taskId, field, value){
                   field === 'startDate' ? 'start_date' : 
                   field === 'endDate' ? 'end_date' : field;
 
-  // 1. Atualiza no banco e espera a resposta (rápido)
   const { error } = await window.db.from('tasks').update({ [dbField]: value || null }).eq('id', taskId);
   if (error) { showToast("Erro ao salvar tarefa: " + error.message, "error"); return; }
 
-  // 2. Atualiza o state local
   found.task[field] = value;
   
-  // 3. ATUALIZAÇÃO CIRÚRGICA INSTANTÂNEA (Sem engasgos!)
-  updateObjectiveDOM(found.objective.id, compId);
+  // CHAMADA DA FUNÇÃO LEVE AQUI
+  updateObjectiveMetrics(found.objective.id, compId);
 
-  // 4. O resto (logs e notificações) roda em background, sem await.
   if (field !== 'created_at' && field !== 'updated_at') {
     window.db.from('audit_logs').insert([{
       task_id: taskId,
