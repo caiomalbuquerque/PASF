@@ -1,31 +1,29 @@
 # PASF — Plano de Ação para Sustentabilidade Financeira
 
 Protótipo visual em HTML/CSS/JS puro. Hospedagem prevista: GitHub Pages.
-Banco de dados previsto: Supabase (Auth + Postgres + Storage + Realtime).
+Banco de dados previsto: Supabase.
 
 ## Como executar localmente
 
+Opção 1 — servidor simples (recomendado):
     npx serve .
     # ou: python -m http.server 8080
 
-Depois abra `http://localhost:8080`.
+Opção 2 — abrir `index.html` direto no navegador (funciona, mas sem cache de sessão entre abas).
 
-## Primeiro acesso
+## Contas demo (senha em `assets/js/state.js`)
 
-Este projeto **não tem usuários pré-cadastrados**. Para criar o primeiro administrador:
+| E-mail               | Senha    | Perfil             |
+|----------------------|----------|--------------------|
+| admin@pasf.com       | admin123 | Admin              |
+| carlos@pasf.com      | 123456   | Global Colaborador |
+| ana@pasf.com         | 123456   | Global Viewer      |
+| maria@emp1.com       | 123456   | Gestor Empresa 1   |
+| pedro@emp1.com       | 123456   | User Empresa 1     |
+| lucas@emp1.com       | 123456   | Viewer Empresa 1   |
 
-1. No painel do Supabase, vá em **Authentication → Users → Add user**.
-2. Informe e-mail e senha (ex.: `admin@pasf.com` / uma senha forte).
-3. Copie o `UUID` do usuário criado.
-4. No **SQL Editor**, rode:
+## Persistência
 
-   ```sql
-   insert into profiles (id, name, email, role, company_id, manager_id)
-   values (
-     'COLE_O_UUID_AQUI',
-     'Administrador',
-     'admin@pasf.com',
-     'admin',
-     null,
-     null
-   );
+Estado é salvo em `localStorage` (chave `pasf_state_v1`) a cada alteração.
+Para resetar, abra o DevTools → Application → Local Storage → remover a chave,
+ou use o botão "Resetar demo" na tela de login.

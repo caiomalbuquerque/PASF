@@ -1,0 +1,28 @@
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#0f172a 0%,#0f4c81 100%);padding:24px}
+.login-card{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:440px;box-shadow:var(--shadow-lg)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.login-logo .logo-mark{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--accent));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px}
+.login-logo h1{font-size:20px;font-weight:700;color:var(--gray-900)}
+.login-logo p{font-size:12px;color:var(--gray-500)}
+.login-card label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px;margin-top:14px}
+.login-card input{width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);outline:none;transition:var(--transition)}
+.login-card input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,76,129,.15)}
+.login-card .submit{width:100%;margin-top:20px;padding:11px;background:var(--primary);color:#fff;border-radius:var(--radius);
+  font-weight:600;font-size:14px;transition:var(--transition)}
+.login-card .submit:hover{background:var(--primary-light)}
+.login-error{background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:6px;font-size:12px;margin-top:12px}
+.demo-logins{margin-top:22px;padding-top:18px;border-top:1px solid var(--gray-200)}
+.demo-logins p{font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.demo-btn{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--gray-50);border:1px solid var(--gray-200);
+  border-radius:6px;text-align:left;transition:var(--transition);font-size:11px}
+.demo-btn:hover{background:var(--gray-100);border-color:var(--primary)}
+.demo-btn .avatar{width:26px;height:26px;font-size:10px}
+.demo-btn .info{overflow:hidden}
+.demo-btn strong{display:block;font-size:11px;color:var(--gray-800);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.demo-btn small{font-size:9px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.03em}
+.reset-demo{margin-top:18px;width:100%;padding:8px;font-size:11px;color:var(--gray-500);border-radius:6px;
+  border:1px dashed var(--gray-300);transition:var(--transition)}
+.reset-demo:hover{color:var(--danger);border-color:var(--danger)}
