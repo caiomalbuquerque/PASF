@@ -144,7 +144,7 @@ function initRealtime(){
           
           if (activeView === 'objetivos') {
             const found = findTask(updatedTask.id);
-            if(found) updateObjectiveDOM(found.objective.id, found.compId);
+            if(found) updateObjectiveMetrics(found.objective.id, found.compId); // <-- MUDOU AQUI
           } else if (activeView === 'dashboard') {
             renderDashboard();
           } else if (activeView === 'minhas') {
@@ -170,7 +170,7 @@ function initRealtime(){
           realtimeObjTimeout = setTimeout(() => {
             const activeView = document.querySelector('.nav-item.active')?.dataset.view;
             if (activeView === 'objetivos') {
-              updateObjectiveDOM(updatedObj.id, compId);
+              updateObjectiveMetrics(updatedObj.id, compId); // <-- MUDOU AQUI
             }
           }, 150);
         }
