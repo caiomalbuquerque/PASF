@@ -10,8 +10,7 @@ function effectiveStatus(task){
   return task.status;
 }
 
-// ✔ CORRIGIDO: retorna compId como Number para não propagar string
-// para state.currentCompany (usado em comparações estritas).
+// ✔ CORRIGIDO: compId como Number para não propagar string
 function findTask(taskId){
   for(const compId in state.objectives){
     for(const o of state.objectives[compId]){
@@ -25,27 +24,39 @@ function findTask(taskId){
 function refreshObjectiveDOM(objId, compId) {
   const o = (state.objectives[compId] || []).find(x => x.id === objId);
   if (!o) return;
-  // Não é mais usado, mas mantido por compatibilidade
 }
 
 async function updateTask(compId, taskId, field, value){
   const found = findTask(taskId);
   if(!found) return;
+
+  // ✔ CORRIGIDO: bloqueia edição em tarefa ainda sendo criada
+  if (String(taskId).startsWith('temp_')) return;
   
   const oldValue = found.task[field];
   if(String(oldValue||'') === String(value||'')) return;
   
+  // ✔ CORRIGIDO (optimistic): atualiza o estado LOCAL imediatamente.
+  // O DOM do campo já está com o novo valor (veio do evento change).
+  // Isso faz o realtime de eco ser detectado como "mesmo valor" e não re-renderizar.
+  found.task[field] = value;
+  updateObjectiveMetrics(found.objective.id, compId);
+
   const dbField = field === 'responsibleId' ? 'responsible_id' : 
                   field === 'startDate' ? 'start_date' : 
                   field === 'endDate' ? 'end_date' : field;
 
   const { error } = await window.db.from('tasks').update({ [dbField]: value || null }).eq('id', taskId);
-  if (error) { showToast("Erro ao salvar tarefa: " + error.message, "error"); return; }
 
-  found.task[field] = value;
-  
-  updateObjectiveMetrics(found.objective.id, compId);
+  // ✔ CORRIGIDO: rollback se o banco rejeitar
+  if (error) {
+    found.task[field] = oldValue;
+    updateObjectiveMetrics(found.objective.id, compId);
+    showToast("Erro ao salvar tarefa: " + error.message, "error");
+    return;
+  }
 
+  // Auditoria e notificações continuam fire-and-forget (não bloqueiam a UI)
   if (field !== 'created_at' && field !== 'updated_at') {
     window.db.from('audit_logs').insert([{
       task_id: taskId,
@@ -85,37 +96,77 @@ async function addTask(compId, objId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(!o) return;
   
-  const firstUser = state.users.find(u => u.companyId === Number(compId));
+  const firstUser = state.users.find(u => Number(u.companyId) === Number(compId));
   const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
   
-  const newTask = {
+  // ✔ CORRIGIDO (optimistic): cria local com ID temporário e mostra imediatamente
+  const tempId = 'temp_' + uid();
+  const tempTask = {
+    id: tempId,
+    objective_id: objId,
+    description: '',
+    responsibleId: firstUser?.id || null,
+    status: 'A Iniciar',
+    sort_order: maxOrder + 1,
+    attachments: [],
+    _pending: true
+  };
+  
+  o.tasks.push(tempTask);
+  
+  if(!state._openObjectives) state._openObjectives = [];
+  if(!state._openObjectives.includes(String(objId))) state._openObjectives.push(String(objId));
+  
+  renderObjectivesListOnly();
+  
+  // Sincroniza no banco em background
+  const { data, error } = await window.db.from('tasks').insert([{
     objective_id: objId,
     description: '',
     responsible_id: firstUser?.id || null,
     status: 'A Iniciar',
     sort_order: maxOrder + 1
-  };
-
-  const { data, error } = await window.db.from('tasks').insert([newTask]).select().single();
-  if (error) { showToast("Erro ao criar tarefa.", "error"); return; }
+  }]).select().single();
   
-  o.tasks.push({ ...data, responsibleId: data.responsible_id, startDate: data.start_date, endDate: data.end_date, attachments: [] });
+  if (error) {
+    // Rollback
+    o.tasks = o.tasks.filter(t => t.id !== tempId);
+    renderObjectivesListOnly();
+    showToast("Erro ao criar tarefa: " + error.message, "error");
+    return;
+  }
   
-  if(!state._openObjectives) state._openObjectives = [];
-  if(!state._openObjectives.includes(String(objId))) state._openObjectives.push(String(objId));
-  
-  renderObjectivesListOnly(); 
+  // Substitui o temp pelo registro real
+  const idx = o.tasks.findIndex(t => t.id === tempId);
+  if (idx >= 0) {
+    o.tasks[idx] = {
+      ...data,
+      responsibleId: data.responsible_id,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      attachments: []
+    };
+  }
+  renderObjectivesListOnly();
 }
 
 async function removeTask(compId, objId, taskId){
   if(!confirm('Remover esta tarefa?')) return;
-  const { error } = await window.db.from('tasks').delete().eq('id', taskId);
-  if (error) { showToast("Erro ao remover tarefa.", "error"); return; }
-  
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
-  if(o) o.tasks = o.tasks.filter(t => t.id !== taskId);
-  
+  if(!o) return;
+
+  // ✔ CORRIGIDO (optimistic): remove da UI imediatamente
+  const backup = o.tasks.slice();
+  o.tasks = o.tasks.filter(t => t.id !== taskId);
   renderObjectivesListOnly();
+
+  const { error } = await window.db.from('tasks').delete().eq('id', taskId);
+  if (error) {
+    o.tasks = backup;
+    renderObjectivesListOnly();
+    showToast("Erro ao remover tarefa: " + error.message, "error");
+    return;
+  }
   showToast("Tarefa removida.", "success");
 }
 
