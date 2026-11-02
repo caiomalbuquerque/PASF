@@ -75,10 +75,6 @@
     });
 
     state.currentUser = user;
-
-    // ✔ CORRIGIDO: garante que currentCompany seja sempre Number (ou null).
-    // Antes, dependendo da origem, podia vir string e quebrar comparações
-    // estritas (===) em permissões, filtros e renderUsers.
     const rawCompanyId = user.companyId ?? state.companies[0]?.id ?? null;
     state.currentCompany = rawCompanyId != null ? Number(rawCompanyId) : null;
 
@@ -102,8 +98,29 @@
 let realtimeRenderTimeout;
 let realtimeObjTimeout;
 
+// ✔ NOVO: compara os campos relevantes de uma task local com o payload do banco
+function taskValuesEqual(lt, dbTask){
+  return String(lt.description || '')      === String(dbTask.description || '') &&
+         String(lt.responsibleId || '')    === String(dbTask.responsible_id || '') &&
+         String(lt.startDate || '')        === String(dbTask.start_date || '') &&
+         String(lt.endDate || '')          === String(dbTask.end_date || '') &&
+         String(lt.status || '')           === String(dbTask.status || '') &&
+         String(lt.cost || '')             === String(dbTask.cost || '') &&
+         String(lt.result || '')           === String(dbTask.result || '') &&
+         String(lt.notes || '')            === String(dbTask.notes || '') &&
+         String(lt.sort_order || 0)        === String(dbTask.sort_order || 0);
+}
+
+// ✔ NOVO: o usuário está com o cursor dentro de um card editável?
+function userIsEditing(){
+  const a = document.activeElement;
+  if (!a) return false;
+  if (a.closest && a.closest('.task-card.open, .objective-card')) return true;
+  return false;
+}
+
 function initRealtime(){
-  // 1. Canal de Notificações
+  // 1. Notificações
   window.db.channel(`notifs:${state.currentUser.id}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${state.currentUser.id}` }, payload => {
       const n = payload.new;
@@ -115,18 +132,29 @@ function initRealtime(){
     })
     .subscribe();
 
-  // 2. Canal de Tarefas (Sincronização em Tempo Real)
+  // 2. Tasks realtime — COM PROTEÇÃO CONTRA ECO PRÓPRIO
   window.db.channel('tasks_realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
       if (payload.eventType === 'DELETE') return;
       
       const updatedTask = payload.new;
+
+      // ✔ CORRIGIDO: se é eco da nossa própria edição, só atualiza métricas e sai.
+      // Isso evita re-renderizar a tela inteira enquanto o usuário digita.
+      const localFound = findTask(updatedTask.id);
+      if (localFound && taskValuesEqual(localFound.task, updatedTask)) {
+        updateObjectiveMetrics(localFound.objective.id, localFound.compId);
+        return;
+      }
+
+      // ✔ CORRIGIDO: se o usuário está com foco em algum campo, NÃO re-renderiza.
+      // Apenas atualiza o state em memória — o próximo render natural vai pegar.
+      const isEditing = userIsEditing();
+
       let foundAny = false;
-      
       Object.keys(state.objectives).forEach(compId => {
         state.objectives[compId].forEach(obj => {
           const taskIndex = obj.tasks.findIndex(t => String(t.id) === String(updatedTask.id));
-          
           if (taskIndex !== -1) {
             foundAny = true;
             obj.tasks[taskIndex] = {
@@ -136,34 +164,35 @@ function initRealtime(){
               startDate: updatedTask.start_date,
               endDate: updatedTask.end_date
             };
-            
             obj.tasks.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
           }
         });
       });
 
-      if (foundAny) {
-        clearTimeout(realtimeRenderTimeout);
-        realtimeRenderTimeout = setTimeout(() => {
-          const activeView = document.querySelector('.nav-item.active')?.dataset.view;
-          
-          if (activeView === 'objetivos') {
-            const found = findTask(updatedTask.id);
-            if(found) updateObjectiveMetrics(found.objective.id, found.compId);
-            if (state.currentObjective && String(state.currentObjective) === String(found.objective.id)) {
-               renderObjectives(); 
-            }
-          } else if (activeView === 'dashboard') {
-            renderDashboard();
-          } else if (activeView === 'minhas') {
-            renderMyTasks();
+      if (!foundAny) return;
+
+      clearTimeout(realtimeRenderTimeout);
+      realtimeRenderTimeout = setTimeout(() => {
+        if (isEditing) return; // ✔ respeita edição em curso
+
+        const activeView = document.querySelector('.nav-item.active')?.dataset.view;
+        const found = findTask(updatedTask.id);
+
+        if (activeView === 'objetivos') {
+          if (found) updateObjectiveMetrics(found.objective.id, found.compId);
+          if (state.currentObjective && found && String(state.currentObjective) === String(found.objective.id)) {
+            renderObjectives();
           }
-        }, 150); 
-      }
+        } else if (activeView === 'dashboard') {
+          renderDashboard();
+        } else if (activeView === 'minhas') {
+          renderMyTasks();
+        }
+      }, 150);
     })
     .subscribe();
 
-  // 3. Canal de Objetivos (Sincronização do Título)
+  // 3. Objectives realtime — COM PROTEÇÃO CONTRA ECO PRÓPRIO
   window.db.channel('objectives_realtime')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'objectives' }, payload => {
       const updatedObj = payload.new;
@@ -171,15 +200,21 @@ function initRealtime(){
       Object.keys(state.objectives).forEach(compId => {
         const objIndex = state.objectives[compId].findIndex(o => String(o.id) === String(updatedObj.id));
         if (objIndex !== -1) {
-          state.objectives[compId][objIndex].title = updatedObj.title;
-          state.objectives[compId][objIndex].monthlySavings = updatedObj.monthly_savings;
-          
+          const localObj = state.objectives[compId][objIndex];
+
+          // ✔ CORRIGIDO: eco da nossa própria edição → não re-renderiza
+          const sameTitle   = String(localObj.title || '')          === String(updatedObj.title || '');
+          const sameSavings = String(localObj.monthlySavings || 0)  === String(updatedObj.monthly_savings || 0);
+          if (sameTitle && sameSavings) return;
+
+          localObj.title = updatedObj.title;
+          localObj.monthlySavings = updatedObj.monthly_savings;
+
           clearTimeout(realtimeObjTimeout);
           realtimeObjTimeout = setTimeout(() => {
+            if (userIsEditing()) return;
             const activeView = document.querySelector('.nav-item.active')?.dataset.view;
-            if (activeView === 'objetivos') {
-              renderObjectives();
-            }
+            if (activeView === 'objetivos') renderObjectives();
           }, 150);
         }
       });
