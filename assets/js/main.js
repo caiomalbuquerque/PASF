@@ -4,6 +4,22 @@
   const user = await requireAuth();
   if(!user) return;
 
+  (async function bootstrapApp(){
+  const user = await requireAuth();
+  if(!user) return;
+
+  // ⭐ Listener global de sessão: expira → volta ao login automaticamente
+  window.db.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') {
+      window.location.href = 'index.html';
+    }
+  });
+
+  const loadingEl = document.getElementById('loading-screen');
+  const appEl = document.getElementById('app');
+
+  try {
+
   const loadingEl = document.getElementById('loading-screen');
   const appEl = document.getElementById('app');
 
