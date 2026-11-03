@@ -11,7 +11,6 @@ function taskHTML(t, compId, objId){
     return `<div class="task-card task-card-pending" id="task-${t.id}"><span style="color:var(--gray-500)">Salvando…</span></div>`;
   }
 
-  const del = can('delTask');
   const eff = effectiveStatus(t);
   const late = eff === 'Atrasada';
   const resp = userById(t.responsibleId);
@@ -76,6 +75,7 @@ function taskHTML(t, compId, objId){
 }
 
 function attachmentsInnerHTML(t, compId, edit){
+  if (!t.id) return ''; // Se for tarefa nova, não tem anexo ainda
   const atts = t.attachments || [];
   return `
     <div class="attach-row">
@@ -102,78 +102,93 @@ function refreshAttachmentsUI(taskId){
   refreshTaskDOM(found.compId, found.objective.id, taskId);
 }
 
-function openTaskModal(compId, objId, taskId, focusField){
-  const found = findTask(taskId);
-  if (!found || found.task._pending) return;
+function openNewTaskModal(compId, objId) {
+  if (!can('addTask')) return;
+  openTaskModal(compId, objId, null); // Passa null para indicar que é nova
+}
 
-  const t     = found.task;
+function openTaskModal(compId, objId, taskId, focusField){
+  const isNew = !taskId;
+  const found = isNew ? null : findTask(taskId);
+  
+  if (!isNew && (!found || found.task._pending)) return;
+
+  const t     = isNew ? { description: '', responsibleId: null, status: 'A Iniciar', cost: '', result: '', notes: '', attachments: [] } : found.task;
   const edit  = can('editTask');
-  const del   = can('delTask');
+  const del   = !isNew && can('delTask');
   const dis   = edit ? '' : 'disabled';
-  const users = usersOfCompany(found.compId);
+  const users = usersOfCompany(compId);
   const eff   = effectiveStatus(t);
   const autoLate = eff === 'Atrasada' && t.status !== 'Atrasada';
 
   const overlay = openModal(`
-    <div class="modal-header">
-      <h3>${edit ? 'Editar tarefa' : 'Tarefa'}</h3>
+    <div class="modal-header" style="padding: 14px 20px;">
+      <h3>${isNew ? 'Nova Tarefa' : (edit ? 'Editar tarefa' : 'Tarefa')}</h3>
       <button onclick="this.closest('.modal-overlay').remove()">✕</button>
     </div>
 
-    <div class="modal-body">
-      <label>Descrição</label>
-      <textarea data-field="description" style="min-height: 60px; resize: vertical;" placeholder="Descreva a tarefa detalhadamente..." ${dis}>${escapeHtml(t.description || '')}</textarea>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+    <div class="modal-body" style="padding: 16px 20px; overflow-y: hidden;">
+      
+      <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
         <div>
-          <label>Responsável</label>
-          <select data-field="responsibleId" ${dis}>
+          <label style="margin-top: 0; margin-bottom: 4px;">Descrição <span style="color:var(--danger)">*</span></label>
+          <textarea id="newTaskDescription" data-field="description" style="min-height: 50px; max-height: 60px; resize: none; padding: 8px 12px;" placeholder="O que precisa ser feito?" ${dis}>${escapeHtml(t.description || '')}</textarea>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+        <div>
+          <label style="margin-top: 0; margin-bottom: 4px;">Responsável</label>
+          <select data-field="responsibleId" ${dis} style="padding: 8px 12px;">
             <option value="">Não atribuído</option>
             ${users.map(u => `<option value="${u.id}" ${u.id===t.responsibleId?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
           </select>
         </div>
         <div>
-          <label>Status ${autoLate ? `<span class="late-badge">⚠ Atrasada</span>` : ''}</label>
-          <select class="status-select" data-field="status" data-status="${t.status}" ${dis} onchange="this.dataset.status=this.value">
+          <label style="margin-top: 0; margin-bottom: 4px;">Status ${autoLate ? `<span class="late-badge">⚠</span>` : ''}</label>
+          <select class="status-select" data-field="status" data-status="${t.status}" ${dis} onchange="this.dataset.status=this.value" style="padding: 8px 12px;">
             ${STATUS_OPTIONS.map(s => `<option ${s===t.status?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
         <div>
-          <label>Início</label>
-          <input type="date" data-field="startDate" value="${t.startDate||''}" ${dis}>
+          <label style="margin-top: 0; margin-bottom: 4px;">Início</label>
+          <input type="date" data-field="startDate" value="${t.startDate||''}" ${dis} style="padding: 8px 12px;">
         </div>
         <div>
-          <label>Conclusão</label>
-          <input type="date" data-field="endDate" value="${t.endDate||''}" ${dis}>
+          <label style="margin-top: 0; margin-bottom: 4px;">Conclusão</label>
+          <input type="date" data-field="endDate" value="${t.endDate||''}" ${dis} style="padding: 8px 12px;">
         </div>
         <div>
-          <label>Custo (R$)</label>
-          <input type="number" data-field="cost" step="0.01" min="0" value="${t.cost||''}" placeholder="0,00" ${dis}>
+          <label style="margin-top: 0; margin-bottom: 4px;">Custo (R$)</label>
+          <input type="number" data-field="cost" step="0.01" min="0" value="${t.cost||''}" placeholder="0,00" ${dis} style="padding: 8px 12px;">
         </div>
         <div>
-          <label>Resultado (R$)</label>
-          <input type="number" data-field="result" step="0.01" min="0" value="${t.result||''}" placeholder="0,00" ${dis}>
+          <label style="margin-top: 0; margin-bottom: 4px;">Resultado (R$)</label>
+          <input type="number" data-field="result" step="0.01" min="0" value="${t.result||''}" placeholder="0,00" ${dis} style="padding: 8px 12px;">
         </div>
       </div>
 
-      <label>Observações</label>
-      <textarea data-field="notes" placeholder="Anotações..." ${dis} style="min-height: 80px;">${escapeHtml(t.notes||'')}</textarea>
-
-      <div class="attachments" id="task-modal-attachments-${t.id}" style="margin-top: 14px;">
-        ${attachmentsInnerHTML(t, found.compId, edit)}
+      <div style="margin-top: 10px;">
+        <label style="margin-top: 0; margin-bottom: 4px;">Observações</label>
+        <textarea data-field="notes" placeholder="Anotações..." ${dis} style="min-height: 50px; max-height: 70px; resize: none; padding: 8px 12px;">${escapeHtml(t.notes||'')}</textarea>
       </div>
+
+      ${!isNew ? `
+      <div class="attachments" id="task-modal-attachments-${t.id}" style="margin-top: 10px; padding-top: 10px;">
+        ${attachmentsInnerHTML(t, compId, edit)}
+      </div>` : ''}
     </div>
 
-    <div class="modal-footer" style="display: flex; align-items: center; width: 100%;">
-      ${del ? `<button class="btn btn-danger" style="margin-right: auto;" onclick="removeTask('${found.compId}','${found.objective.id}','${t.id}'); this.closest('.modal-overlay').remove();">Excluir</button>` : ''}
+    <div class="modal-footer" style="padding: 14px 20px; display: flex; align-items: center; width: 100%;">
+      ${del ? `<button class="btn btn-danger" style="margin-right: auto; padding: 6px 12px;" onclick="removeTask('${compId}','${objId}','${t.id}'); this.closest('.modal-overlay').remove();">Excluir</button>` : ''}
       
-      <button class="btn btn-ghost" onclick="openHistory('${t.id}')">◔ Histórico</button>
-      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">${edit ? 'Cancelar' : 'Fechar'}</button>
+      ${!isNew ? `<button class="btn btn-ghost" onclick="openHistory('${t.id}')" style="padding: 6px 12px;">◔ Histórico</button>` : ''}
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" style="padding: 6px 12px;">${edit ? 'Cancelar' : 'Fechar'}</button>
       
-      ${edit ? `<button class="btn btn-primary" id="btnSaveTask" onclick="saveTaskModal('${found.compId}','${found.objective.id}','${t.id}', this)">Salvar</button>` : ''}
+      ${edit ? `<button class="btn btn-primary" id="btnSaveTask" onclick="saveTaskModal('${compId}','${objId}','${isNew ? '' : t.id}', this)" style="padding: 6px 16px;">Salvar</button>` : ''}
     </div>`, { className: 'task-modal' });
 
-  if (focusField) {
+  if (!isNew && focusField) {
     setTimeout(() => {
       const el = overlay.querySelector(`[data-field="${focusField}"]`);
       if (el) {
@@ -182,44 +197,89 @@ function openTaskModal(compId, objId, taskId, focusField){
         setTimeout(() => el.classList.remove('pulse-highlight'), 3500);
       }
     }, 100);
+  } else if (isNew) {
+    setTimeout(() => overlay.querySelector('#newTaskDescription')?.focus(), 100);
   }
 }
 
 async function saveTaskModal(compId, objId, taskId, btn){
   const overlay = btn.closest('.modal-overlay');
-  const found = findTask(taskId);
-  if (!found) { overlay.remove(); return; }
-
+  const isNew = !taskId;
+  
   const val = f => overlay.querySelector(`[data-field="${f}"]`)?.value ?? '';
   const description = val('description').trim();
-  if (!description) { showToast('A descrição não pode ser vazia.', 'error'); return; }
+  
+  // REGRA: Bloquear se não tiver descrição
+  if (!description) { 
+    showToast('A descrição é obrigatória para criar/salvar a tarefa.', 'error'); 
+    overlay.querySelector('[data-field="description"]').focus();
+    return; 
+  }
 
   const newValues = {
     description,
-    responsibleId: val('responsibleId'),
+    responsible_id: val('responsibleId') || null,
     status:        val('status'),
-    startDate:     val('startDate'),
-    endDate:       val('endDate'),
-    cost:          val('cost'),
-    result:        val('result'),
+    start_date:    val('startDate') || null,
+    end_date:      val('endDate') || null,
+    cost:          parseFloat(val('cost')) || 0,
+    result:        parseFloat(val('result')) || 0,
     notes:         val('notes')
   };
 
   btn.textContent = 'Salvando...'; btn.disabled = true;
 
-  for (const [field, value] of Object.entries(newValues)) {
-    const old = found.task[field];
-    const isNum = field === 'cost' || field === 'result';
-    const same = isNum
-      ? (Number(old || 0) === Number(value || 0))
-      : (String(old || '') === String(value || ''));
-    if (same) continue;
-    await updateTask(compId, taskId, field, value);
+  if (isNew) {
+    // INSERT
+    const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
+    const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
+
+    const { data, error } = await window.db.from('tasks').insert([{
+      objective_id: objId,
+      ...newValues,
+      sort_order: maxOrder + 1
+    }]).select().single();
+
+    if (error) {
+      showToast("Erro ao criar tarefa: " + error.message, "error");
+      btn.textContent = 'Salvar'; btn.disabled = false;
+      return;
+    }
+
+    o.tasks.push({
+      ...data,
+      responsibleId: data.responsible_id,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      attachments: []
+    });
+    showToast("Tarefa criada!", "success");
+
+  } else {
+    // UPDATE
+    const found = findTask(taskId);
+    if (!found) { overlay.remove(); return; }
+
+    for (const [field, value] of Object.entries(newValues)) {
+      const dbField = field === 'responsibleId' ? 'responsible_id' : 
+                      field === 'startDate' ? 'start_date' : 
+                      field === 'endDate' ? 'end_date' : field;
+      
+      const old = found.task[field];
+      const isNum = field === 'cost' || field === 'result';
+      const same = isNum
+        ? (Number(old || 0) === Number(value || 0))
+        : (String(old || '') === String(value || ''));
+      if (same) continue;
+      
+      // Usa a função updateTask original para manter os logs e notificações
+      await updateTask(compId, taskId, field, value);
+    }
+    showToast("Tarefa atualizada!", "success");
   }
 
   overlay.remove();
-  refreshTaskDOM(found.compId, objId, taskId);
-  showToast("Tarefa atualizada!", "success");
+  renderObjectives(); // Recarrega a lista de tarefas
 }
 
 function openHistory(taskId){
