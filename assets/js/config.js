@@ -3,11 +3,9 @@
 const ROLE_LABELS = {
   admin:               'Administrador',
   global_collaborator: 'Colaborador Global',
-  global_viewer:       'Viewer Global',
   unique_collaborator: 'Gestor',
   unique_leader:       'Líder',
-  unique_user:         'Usuário Padrão',
-  unique_viewer:       'Viewer'
+  unique_user:         'Usuário Padrão'
 };
 
 const ROLE_SHORT = {
@@ -27,13 +25,13 @@ const PERMS = {
   global_collaborator: { scope:'all', createObj:true,  editObj:true,  delObj:true,  addTask:true,  editTask:true,  delTask:true,  manageUsers:true,  seeUsers:true,  seeCompanies:true  },
   global_viewer:       { scope:'all', createObj:false, editObj:false, delObj:false, addTask:false, editTask:false, delTask:false, manageUsers:false, seeUsers:false, seeCompanies:true  },
   
-  // Gestor: edita objetivos e tarefas da sua unidade
+  // Gestor: edita objetivos e tarefas de sua unidade
   unique_collaborator: { scope:'own', createObj:true,  editObj:true,  delObj:true,  addTask:true,  editTask:true,  delTask:true,  manageUsers:true,  seeUsers:true,  seeCompanies:false },
   
   // Líder: edita TODAS as tarefas (atribui responsáveis, etc), mas NÃO cria/edita objetivos
   unique_leader:       { scope:'own', createObj:false, editObj:false, delObj:false, addTask:true,  editTask:true,  delTask:true,  manageUsers:false, seeUsers:false, seeCompanies:false },
   
-  // Usuário Padrão: Edita apenas as tarefas destinadas a ele (regra especial no código)
+  // Usuário Padrão: Edita apenas as tarefas destinadas a ele (regra aplicada via JS no task-card)
   unique_user:         { scope:'own', createObj:false, editObj:false, delObj:false, addTask:false, editTask:true,  delTask:false, manageUsers:false, seeUsers:false, seeCompanies:false },
   
   // Viewer: Apenas visualiza
