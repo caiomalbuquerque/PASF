@@ -75,7 +75,7 @@ function taskHTML(t, compId, objId){
 }
 
 function attachmentsInnerHTML(t, compId, edit){
-  if (!t.id) return ''; // Se for tarefa nova, não tem anexo ainda
+  if (!t.id) return ''; 
   const atts = t.attachments || [];
   return `
     <div class="attach-row">
@@ -104,7 +104,7 @@ function refreshAttachmentsUI(taskId){
 
 function openNewTaskModal(compId, objId) {
   if (!can('addTask')) return;
-  openTaskModal(compId, objId, null); // Passa null para indicar que é nova
+  openTaskModal(compId, objId, null); 
 }
 
 function openTaskModal(compId, objId, taskId, focusField){
@@ -114,7 +114,12 @@ function openTaskModal(compId, objId, taskId, focusField){
   if (!isNew && (!found || found.task._pending)) return;
 
   const t     = isNew ? { description: '', responsibleId: null, status: 'A Iniciar', cost: '', result: '', notes: '', attachments: [] } : found.task;
-  const edit  = can('editTask');
+  
+  // REGRA DE PERMISSÃO: Usuário Padrão só edita se for o responsável
+  const isAssignedToMe = String(t.responsibleId) === String(state.currentUser.id);
+  const canEditTaskGlobal = can('editTask');
+  const edit = (state.currentUser.role === 'unique_user') ? isAssignedToMe : canEditTaskGlobal;
+  
   const del   = !isNew && can('delTask');
   const dis   = edit ? '' : 'disabled';
   const users = usersOfCompany(compId);
@@ -123,7 +128,7 @@ function openTaskModal(compId, objId, taskId, focusField){
 
   const overlay = openModal(`
     <div class="modal-header" style="padding: 14px 20px;">
-      <h3>${isNew ? 'Nova Tarefa' : (edit ? 'Editar tarefa' : 'Tarefa')}</h3>
+      <h3>${isNew ? 'Nova Tarefa' : (edit ? 'Editar tarefa' : 'Visualizar tarefa')}</h3>
       <button onclick="this.closest('.modal-overlay').remove()">✕</button>
     </div>
 
@@ -209,7 +214,6 @@ async function saveTaskModal(compId, objId, taskId, btn){
   const val = f => overlay.querySelector(`[data-field="${f}"]`)?.value ?? '';
   const description = val('description').trim();
   
-  // REGRA: Bloquear se não tiver descrição
   if (!description) { 
     showToast('A descrição é obrigatória para criar/salvar a tarefa.', 'error'); 
     overlay.querySelector('[data-field="description"]').focus();
@@ -230,7 +234,6 @@ async function saveTaskModal(compId, objId, taskId, btn){
   btn.textContent = 'Salvando...'; btn.disabled = true;
 
   if (isNew) {
-    // INSERT
     const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
     const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
 
@@ -256,7 +259,6 @@ async function saveTaskModal(compId, objId, taskId, btn){
     showToast("Tarefa criada!", "success");
 
   } else {
-    // UPDATE
     const found = findTask(taskId);
     if (!found) { overlay.remove(); return; }
 
@@ -272,14 +274,13 @@ async function saveTaskModal(compId, objId, taskId, btn){
         : (String(old || '') === String(value || ''));
       if (same) continue;
       
-      // Usa a função updateTask original para manter os logs e notificações
       await updateTask(compId, taskId, field, value);
     }
     showToast("Tarefa atualizada!", "success");
   }
 
   overlay.remove();
-  renderObjectives(); // Recarrega a lista de tarefas
+  renderObjectives(); 
 }
 
 function openHistory(taskId){
