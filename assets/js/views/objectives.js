@@ -108,6 +108,7 @@ function objectiveSummaryHTML(o, idx, compId){
     
     <div class="objective-header" style="align-items: flex-start; padding: 20px; border-bottom: none;">
       
+      <!-- Descrição e Tarefas Concluídas -->
       <div style="display:flex; gap:14px; flex: 1; min-width: 250px;">
         <span class="objective-num" style="margin-top: 2px;">${String(idx+1).padStart(2,'0')}</span>
         <div style="flex:1;">
@@ -119,34 +120,35 @@ function objectiveSummaryHTML(o, idx, compId){
         </div>
       </div>
 
-      <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top: 2px; text-align:center; justify-content:flex-end;">
-        <div style="display:flex; flex-direction:column;">
+      <!-- Métricas com alinhamento fixo (min-width: 90px) -->
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top: 2px; justify-content:flex-end;">
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
           <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
         </div>
-        <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
           <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
         </div>
-        <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
           <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
         </div>
-        <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
           <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
         </div>
-        <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
           <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
         </div>
-        <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
           <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
         </div>
       </div>
       
-      <div style="margin-left: 20px; color: var(--primary); font-size: 20px; font-weight: bold; align-self: center;">
+      <div style="margin-left: 10px; color: var(--primary); font-size: 20px; font-weight: bold; align-self: center;">
         &rarr;
       </div>
     </div>
@@ -172,83 +174,71 @@ function renderObjectiveDetail(objId, el) {
   const pctRealizado = estMensal > 0 ? (resultadoEntregue / estMensal) * 100 : 0;
   const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
 
-  const canEditObj = can('editObj');
   const canAddTask = can('addTask');
-  
   const filteredTasks = state._objStatus ? allTasks.filter(t => effectiveStatus(t) === state._objStatus) : allTasks;
-  const taskCountText = filteredTasks.length !== allTasks.length ? `${filteredTasks.length} de ${allTasks.length}` : `${allTasks.length}`;
 
   el.innerHTML = `
     <!-- CONTAINER FIXO (STICKY) -->
-    <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px;">
+    <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px; padding-bottom: 16px;">
       
-      <!-- Botão Voltar alinhado -->
-      <div style="margin-bottom: 12px;">
-        <button onclick="closeObjectiveDetail()" style="display: inline-flex; align-items: center; gap: 6px; color: var(--gray-600); font-weight: 600; font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--gray-300); background: #fff; box-shadow: var(--shadow-sm); transition: var(--transition);" onmouseover="this.style.color='var(--primary)'; this.style.borderColor='var(--primary)'" onmouseout="this.style.color='var(--gray-600)'; this.style.borderColor='var(--gray-300)'">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-          Voltar para Objetivos
-        </button>
-      </div>
-
       <!-- Cabeçalho do Objetivo (Clicável para Editar) -->
-      <div class="objective-card" style="box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; cursor: pointer; transition: var(--transition);" onclick="openObjectiveModal('${compId}', '${o.id}')" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
-        <div class="objective-header" style="align-items: flex-start; padding: 20px; background: #fff; border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);">
-          <div style="display:flex; gap:14px; flex: 1; min-width: 250px; flex-wrap: wrap;">
-            <div style="flex:1; min-width: 200px;">
-              <h3 style="font-size:20px; line-height:1.3; margin:0; word-break: break-word;">
+      <div class="objective-card" style="box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; cursor: pointer; transition: var(--transition); border-radius: var(--radius-lg);" onclick="openObjectiveModal('${compId}', '${o.id}')" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
+        <div class="objective-header" style="display: block; padding: 20px; background: #fff; border-radius: var(--radius-lg);">
+          
+          <div style="display: flex; gap: 24px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+            <!-- Título com fonte ligeiramente menor -->
+            <div style="flex: 1; min-width: 250px;">
+              <h3 style="font-size: 18px; line-height: 1.3; margin: 0; word-break: break-word; color: var(--gray-900);">
                 ${escapeHtml(o.title)}
               </h3>
-              <div class="meta" style="margin-top: 8px; display:flex; gap:12px;">
-                <span style="font-weight:600; color:var(--gray-500); font-size: 13px;">${done}/${allTasks.length} tarefas concluídas</span>
-                ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700;">${late} em atraso</span>` : ''}
+            </div>
+
+            <!-- Métricas -->
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end;">
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Estimativa Mensal</span>
+                <span style="font-size: 14px; font-weight: 800; color: var(--gray-800); margin-top: 4px;">${fmtBRL(estMensal)}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Entregue</span>
+                <span style="font-size: 14px; font-weight: 800; color: var(--gray-800); margin-top: 4px;">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Custos Envolvidos</span>
+                <span style="font-size: 14px; font-weight: 800; color: var(--gray-800); margin-top: 4px;">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Saldo</span>
+                <span style="font-size: 14px; font-weight: 800; color: ${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top: 4px;">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">% Realizado</span>
+                <span style="font-size: 14px; font-weight: 800; color: var(--primary); margin-top: 4px;">${pctRealizado.toFixed(1)}%</span>
+              </div>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">% Pendente</span>
+                <span style="font-size: 14px; font-weight: 800; color: ${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top: 4px;">${pctPendente.toFixed(1)}%</span>
               </div>
             </div>
           </div>
 
-          <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 10px; text-align:center; justify-content:flex-end;">
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
-              <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
-              <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
-              <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
-              <span style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
-              <span style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
-              <span style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
-            </div>
+          <!-- Linha inferior do cabeçalho: Contagem de tarefas e Adicionar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-100);" onclick="event.stopPropagation()">
+            <span style="font-weight: 600; color: var(--gray-600); font-size: 14px;">
+              Tarefas: <span style="background: var(--gray-100); padding: 2px 8px; border-radius: 99px; font-size: 12px; margin-left: 4px;">${done}/${allTasks.length} concluídas</span>
+              ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; margin-left: 8px;">${late} em atraso</span>` : ''}
+            </span>
+            ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
           </div>
         </div>
       </div>
     </div>
 
-    <!-- CORPO ROLÁVEL (Tarefas) -->
-    <div class="objective-card" style="margin: 0; border: 1px solid var(--gray-200); border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; box-shadow: var(--shadow-md);">
-      <div class="objective-body" style="display: block; padding: 20px; background: var(--gray-50); border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);">
-        
-        <div class="tasks-header" style="margin-top: 10px;">
-          <h4 style="font-size: 16px;">Tarefas <span class="count">${taskCountText}</span></h4>
-          ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
-        </div>
-        
-        <div>
-          ${filteredTasks.length > 0 ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') : `<p style="color:var(--gray-500);font-size:13px;padding:16px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;text-align:center">Nenhuma tarefa encontrada.</p>`}
-        </div>
-        
-      </div>
+    <!-- CONTAINER DE TAREFAS (Agora apenas as tarefas) -->
+    <div style="margin-top: 16px;">
+      ${filteredTasks.length > 0 
+        ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
+        : `<div style="padding: 40px; text-align: center; background: #fff; border: 1px dashed var(--gray-300); border-radius: var(--radius-lg); color: var(--gray-500);">Nenhuma tarefa encontrada.</div>`}
     </div>
   `;
 }
@@ -339,9 +329,10 @@ async function saveObjectiveModal(compId, objId, btn) {
   showToast("Objetivo atualizado!", "success");
 }
 
-function startEditObjective(id, compId) {} // Desativado (agora usa modal)
-function cancelEditObjective(id, compId) {} // Desativado
-async function saveObjectiveTitle(compId, objId) {} // Desativado
+// Funções antigas desativadas (agora usa modal)
+function startEditObjective(id, compId) {} 
+function cancelEditObjective(id, compId) {} 
+async function saveObjectiveTitle(compId, objId) {} 
 
 function openNewObjectiveModal(){
   if(!can('createObj')) return;
