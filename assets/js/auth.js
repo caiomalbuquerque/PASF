@@ -126,13 +126,19 @@ async function bootLoginPage(){
   $('forgotForm').addEventListener('submit', handleForgot);
 
   // Carrega empresas para o select de cadastro
-  const { data: comps } = await window.db.from('companies').select('id, name').eq('is_active', true).order('name');
-  if (comps) {
-    const sel = $('signupCompany');
+  const { data: comps, error } = await window.db.from('companies').select('id, name').eq('is_active', true).order('name');
+  
+  const sel = $('signupCompany');
+  if (error) {
+    console.error("Erro ao carregar empresas:", error);
+    sel.innerHTML = '<option value="">Erro ao carregar empresas</option>';
+  } else if (comps && comps.length > 0) {
     sel.innerHTML = '<option value="">Selecione sua empresa</option>';
     comps.forEach(c => {
       sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
     });
+  } else {
+    sel.innerHTML = '<option value="">Nenhuma empresa ativa encontrada</option>';
   }
 }
 
