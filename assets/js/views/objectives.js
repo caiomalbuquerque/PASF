@@ -108,7 +108,6 @@ function objectiveSummaryHTML(o, idx, compId){
     
     <div class="objective-header" style="align-items: flex-start; padding: 20px; border-bottom: none;">
       
-      <!-- Descrição e Tarefas Concluídas -->
       <div style="display:flex; gap:14px; flex: 1; min-width: 250px;">
         <span class="objective-num" style="margin-top: 2px;">${String(idx+1).padStart(2,'0')}</span>
         <div style="flex:1;">
@@ -120,30 +119,30 @@ function objectiveSummaryHTML(o, idx, compId){
         </div>
       </div>
 
-      <!-- Métricas com alinhamento fixo (min-width: 90px) -->
-      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top: 2px; justify-content:flex-end;">
-        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
+      <!-- ALINHAMENTO CORRIGIDO AQUI -->
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top: 2px; justify-content:flex-end; align-items: flex-start;">
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 110px; text-align: center;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em; white-space: nowrap;">Estimativa</span>
           <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
         </div>
-        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 110px; text-align: center;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em; white-space: nowrap;">Entregue</span>
           <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
         </div>
-        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 110px; text-align: center;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em; white-space: nowrap;">Custos</span>
           <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
         </div>
-        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 110px; text-align: center;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em; white-space: nowrap;">Saldo</span>
           <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
         </div>
-        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 110px; text-align: center;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em; white-space: nowrap;">% Realizado</span>
           <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
         </div>
-        <div style="display:flex; flex-direction:column; flex: 1; min-width: 90px; text-align: center;">
-          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
+        <div style="display:flex; flex-direction:column; flex: 1; min-width: 110px; text-align: center;">
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em; white-space: nowrap;">% Pendente</span>
           <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
         </div>
       </div>
@@ -178,51 +177,47 @@ function renderObjectiveDetail(objId, el) {
   const filteredTasks = state._objStatus ? allTasks.filter(t => effectiveStatus(t) === state._objStatus) : allTasks;
 
   el.innerHTML = `
-    <!-- CONTAINER FIXO (STICKY) -->
     <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px; padding-bottom: 16px;">
       
-      <!-- Cabeçalho do Objetivo (Clicável para Editar) -->
       <div class="objective-card" style="box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; cursor: pointer; transition: var(--transition); border-radius: var(--radius-lg);" onclick="openObjectiveModal('${compId}', '${o.id}')" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
         <div class="objective-header" style="display: block; padding: 20px; background: #fff; border-radius: var(--radius-lg);">
           
           <div style="display: flex; gap: 24px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
-            <!-- Título com fonte ligeiramente menor -->
             <div style="flex: 1; min-width: 250px;">
               <h3 style="font-size: 18px; line-height: 1.3; margin: 0; word-break: break-word; color: var(--gray-900);">
                 ${escapeHtml(o.title)}
               </h3>
             </div>
 
-            <!-- Métricas -->
-            <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end;">
-              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
-                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Estimativa Mensal</span>
+            <!-- ALINHAMENTO CORRIGIDO AQUI -->
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start;">
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 110px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em; white-space: nowrap;">Estimativa</span>
                 <span style="font-size: 14px; font-weight: 800; color: var(--gray-800); margin-top: 4px;">${fmtBRL(estMensal)}</span>
               </div>
-              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
-                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Entregue</span>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 110px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em; white-space: nowrap;">Entregue</span>
                 <span style="font-size: 14px; font-weight: 800; color: var(--gray-800); margin-top: 4px;">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
               </div>
-              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
-                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Custos Envolvidos</span>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 110px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em; white-space: nowrap;">Custos</span>
                 <span style="font-size: 14px; font-weight: 800; color: var(--gray-800); margin-top: 4px;">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
               </div>
-              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
-                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">Saldo</span>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 110px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em; white-space: nowrap;">Saldo</span>
                 <span style="font-size: 14px; font-weight: 800; color: ${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top: 4px;">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
               </div>
-              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
-                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">% Realizado</span>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 110px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em; white-space: nowrap;">% Realizado</span>
                 <span style="font-size: 14px; font-weight: 800; color: var(--primary); margin-top: 4px;">${pctRealizado.toFixed(1)}%</span>
               </div>
-              <div style="display: flex; flex-direction: column; flex: 1; min-width: 90px; text-align: center;">
-                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em;">% Pendente</span>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 110px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em; white-space: nowrap;">% Pendente</span>
                 <span style="font-size: 14px; font-weight: 800; color: ${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top: 4px;">${pctPendente.toFixed(1)}%</span>
               </div>
             </div>
           </div>
 
-          <!-- Linha inferior do cabeçalho: Contagem de tarefas e Adicionar -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-100);" onclick="event.stopPropagation()">
             <span style="font-weight: 600; color: var(--gray-600); font-size: 14px;">
               Tarefas: <span style="background: var(--gray-100); padding: 2px 8px; border-radius: 99px; font-size: 12px; margin-left: 4px;">${done}/${allTasks.length} concluídas</span>
@@ -234,7 +229,6 @@ function renderObjectiveDetail(objId, el) {
       </div>
     </div>
 
-    <!-- CONTAINER DE TAREFAS (Agora apenas as tarefas) -->
     <div style="margin-top: 16px;">
       ${filteredTasks.length > 0 
         ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
@@ -244,7 +238,6 @@ function renderObjectiveDetail(objId, el) {
 }
 
 function updateObjectiveMetrics(objId, compId) {
-  // Atualiza apenas se estiver na tela de lista, pois na tela de detalhe o renderObjectives() já é chamado
   if (state.currentObjective) return;
   
   const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
@@ -282,7 +275,6 @@ function updateObjectiveMetrics(objId, compId) {
   }
 }
 
-/* --- MODAL DE EDIÇÃO DO OBJETIVO --- */
 function openObjectiveModal(compId, objId) {
   if (!can('editObj')) return;
   
@@ -329,7 +321,6 @@ async function saveObjectiveModal(compId, objId, btn) {
   showToast("Objetivo atualizado!", "success");
 }
 
-// Funções antigas desativadas (agora usa modal)
 function startEditObjective(id, compId) {} 
 function cancelEditObjective(id, compId) {} 
 async function saveObjectiveTitle(compId, objId) {} 
