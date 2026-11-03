@@ -43,7 +43,6 @@ async function handleSignUp(e){
 
   err.classList.add('hidden');
 
-  // Validações
   if (email !== emailConfirm) {
     err.textContent = 'Os e-mails não coincidem.'; err.classList.remove('hidden'); return;
   }
@@ -54,7 +53,6 @@ async function handleSignUp(e){
     err.textContent = 'Selecione sua unidade.'; err.classList.remove('hidden'); return;
   }
 
-  // Validação da Senha Forte (Mín 8, 1 Maiúscula, 1 Especial)
   const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>_\-+=]).{8,}$/;
   if (!passwordRegex.test(pass)) {
     err.textContent = 'A senha deve ter no mínimo 8 caracteres, conter 1 letra maiúscula e 1 caractere especial.';
@@ -63,14 +61,13 @@ async function handleSignUp(e){
 
   btn.textContent = 'Cadastrando...'; btn.disabled = true;
 
-  // Cria a conta. O Gatilho no banco vai inserir na tabela profiles automaticamente
   const { data, error } = await window.db.auth.signUp({
     email: email,
     password: pass,
     options: {
       data: {
         name: name,
-        role: 'unique_user', // Força ser usuário padrão
+        role: 'unique_user',
         company_id: companyId,
         manager_id: null
       }
@@ -83,7 +80,6 @@ async function handleSignUp(e){
     return;
   }
 
-  // Sucesso
   alert('Conta criada com sucesso! Verifique seu e-mail para confirmar o cadastro ou faça login.');
   showAuthView('login');
   btn.textContent = 'Cadastrar'; btn.disabled = false;
@@ -113,7 +109,42 @@ async function handleForgot(e){
   btn.textContent = 'Enviar Link'; btn.disabled = false;
 }
 
-// INICIALIZAÇÃO DA PÁGINA
+// --- FUNÇÕES DO SISTEMA (APP.HTML) ---
+
+async function logout(){
+  await window.db.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+async function requireAuth(){
+  const { data: { session }, error } = await window.db.auth.getSession();
+  
+  if (error || !session) {
+    window.location.href = 'index.html';
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await window.db
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    console.error("Erro ao buscar perfil:", profileError);
+    await window.db.auth.signOut();
+    window.location.href = 'index.html';
+    return null;
+  }
+
+  return {
+    ...profile,
+    companyId: profile.company_id,
+    gestorId: profile.manager_id
+  };
+}
+
+// INICIALIZAÇÃO DA PÁGINA DE LOGIN
 async function bootLoginPage(){
   const { data: { session } } = await window.db.auth.getSession();
   if(session){
@@ -125,7 +156,6 @@ async function bootLoginPage(){
   $('signupForm').addEventListener('submit', handleSignUp);
   $('forgotForm').addEventListener('submit', handleForgot);
 
-  // Carrega empresas para o select de cadastro
   const { data: comps, error } = await window.db.from('companies').select('id, name').eq('is_active', true).order('name');
   
   const sel = $('signupCompany');
