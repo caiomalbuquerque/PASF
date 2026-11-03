@@ -26,10 +26,10 @@ function renderUsers(){
           const count = allTasksFlat().filter(t => t.responsibleId === u.id).length;
           return `<tr>
             <td><div style="display:flex;align-items:center;gap:10px">
-              <div class="avatar" style="width:28px;height:28px;font-size:10px;background:${ROLE_COLORS[u.role]}">${initials(u.name)}</div>
+              <div class="avatar" style="width:28px;height:28px;font-size:10px;background:${ROLE_COLORS[u.role] || '#999'}">${initials(u.name)}</div>
               <strong>${escapeHtml(u.name)}</strong></div></td>
             <td>${u.email}</td>
-            <td><span class="tag" style="background:${ROLE_COLORS[u.role]}22;color:${ROLE_COLORS[u.role]}">${ROLE_LABELS[u.role]}</span></td>
+            <td><span class="tag" style="background:${ROLE_COLORS[u.role] || '#999'}22;color:${ROLE_COLORS[u.role] || '#999'}">${ROLE_LABELS[u.role] || u.role}</span></td>
             <td>${comp}</td>
             <td>${gestor}</td>
             <td>${count}</td>
@@ -57,20 +57,46 @@ async function resetUserPassword(email) {
   }
 }
 
+// --- LÓGICA DE GESTOR IMEDIATO ---
+// Popula o select de gestores baseado na empresa selecionada
+function updateManagerOptions(prefix, companyId, selectedManagerId = '', userId = null) {
+  const sel = $(`${prefix}Manager`);
+  if(!sel) return;
+  
+  sel.innerHTML = '<option value="">Nenhum (Topo da Hierarquia)</option>';
+  
+  // Se não tem empresa (ex: Global ou Admin), não há gestor da empresa.
+  if (!companyId) return; 
+
+  // Filtra apenas Gestores da mesma empresa e que não seja o próprio usuário sendo editado
+  const managers = state.users.filter(u =>
+    u.role === 'unique_collaborator' &&
+    String(u.companyId) === String(companyId) &&
+    (u.id !== userId)
+  );
+
+  managers.forEach(m => {
+    const isSelected = String(m.id) === String(selectedManagerId) ? 'selected' : '';
+    sel.innerHTML += `<option value="${m.id}" ${isSelected}>${escapeHtml(m.name)}</option>`;
+  });
+}
+
 function toggleCompanyField(role, prefix = 'newUser') {
   const isGlobal = role.startsWith('global_') || role === 'admin';
   const lbl = $(`lblCompany_${prefix}`);
   const sel = $(`${prefix}Company`);
+  
   if(isGlobal){
     lbl.style.opacity = '0.5'; sel.style.opacity = '0.5'; sel.disabled = true; sel.value = '';
+    updateManagerOptions(prefix, null); // Limpa gestores se não tem empresa
   } else {
     lbl.style.opacity = '1'; sel.style.opacity = '1'; sel.disabled = false;
+    updateManagerOptions(prefix, sel.value); // Carrega gestores da empresa atual
   }
 }
 
 /* ---- Criar Usuário ---- */
 function openNewUserModal(){
-  const managers = state.users.filter(u => ['admin', 'global_collaborator', 'unique_collaborator'].includes(u.role));
   openModal(`
     <div class="modal-header">
       <h3>Novo Responsável</h3>
@@ -88,23 +114,20 @@ function openNewUserModal(){
       <label>Perfil de Acesso</label>
       <select id="newUserRole" onchange="toggleCompanyField(this.value, 'newUser')">
         <option value="unique_user">Usuário Padrão</option>
-        <option value="unique_leader">Líder</option> <!-- NOVO -->
-        <option value="unique_collaborator">Gestor (Empresa)</option>
-        <option value="unique_viewer">Viewer (Empresa)</option>
-        <option value="global_collaborator">Colaborador Global</option>
-        <option value="global_viewer">Viewer Global</option>
+        <option value="unique_leader">Líder</option>
+        <option value="unique_collaborator">Gestor</option>
+        <option value="global_collaborator">Global</option>
         <option value="admin">Administrador</option>
       </select>
 
       <label id="lblCompany_newUser">Empresa Vinculada</label>
-      <select id="newUserCompany">
+      <select id="newUserCompany" onchange="updateManagerOptions('newUser', this.value)">
         ${state.companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
       </select>
 
       <label>Gestor Imediato</label>
       <select id="newUserManager">
         <option value="">Nenhum (Topo da Hierarquia)</option>
-        ${managers.map(m => `<option value="${m.id}">${m.name} (${ROLE_LABELS[m.role]})</option>`).join('')}
       </select>
       <div id="newUserError" class="login-error hidden" style="margin-top:14px"></div>
     </div>
@@ -112,6 +135,12 @@ function openNewUserModal(){
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
       <button class="btn btn-primary" id="btnCreateUser" onclick="submitNewUser(this)">Criar</button>
     </div>`);
+    
+  // Inicializa os gestores com base na primeira empresa da lista
+  setTimeout(() => {
+    const firstCompany = $('newUserCompany').value;
+    updateManagerOptions('newUser', firstCompany);
+  }, 50);
 }
 
 async function submitNewUser(btn){
@@ -154,7 +183,6 @@ async function submitNewUser(btn){
 function openEditUserModal(userId) {
   const u = state.users.find(x => x.id === userId);
   if (!u) return;
-  const managers = state.users.filter(m => ['admin', 'global_collaborator', 'unique_collaborator'].includes(m.role) && m.id !== u.id);
 
   openModal(`
     <div class="modal-header">
@@ -170,23 +198,20 @@ function openEditUserModal(userId) {
       <label>Perfil de Acesso</label>
       <select id="editUserRole" onchange="toggleCompanyField(this.value, 'editUser')">
         <option value="unique_user" ${u.role==='unique_user'?'selected':''}>Usuário Padrão</option>
-        <option value="unique_leader" ${u.role==='unique_leader'?'selected':''}>Líder</option> <!-- NOVO -->
-        <option value="unique_collaborator" ${u.role==='unique_collaborator'?'selected':''}>Gestor (Empresa)</option>
-        <option value="unique_viewer" ${u.role==='unique_viewer'?'selected':''}>Viewer (Empresa)</option>
-        <option value="global_collaborator" ${u.role==='global_collaborator'?'selected':''}>Colaborador Global</option>
-        <option value="global_viewer" ${u.role==='global_viewer'?'selected':''}>Viewer Global</option>
+        <option value="unique_leader" ${u.role==='unique_leader'?'selected':''}>Líder</option>
+        <option value="unique_collaborator" ${u.role==='unique_collaborator'?'selected':''}>Gestor</option>
+        <option value="global_collaborator" ${u.role==='global_collaborator'?'selected':''}>Global</option>
         <option value="admin" ${u.role==='admin'?'selected':''}>Administrador</option>
       </select>
 
       <label id="lblCompany_editUser">Empresa Vinculada</label>
-      <select id="editUserCompany" ${(!u.companyId)?'disabled':''}>
+      <select id="editUserCompany" ${(!u.companyId)?'disabled':''} onchange="updateManagerOptions('editUser', this.value, '${u.gestorId || ''}', '${u.id}')">
         ${state.companies.map(c => `<option value="${c.id}" ${u.companyId==c.id?'selected':''}>${c.name}</option>`).join('')}
       </select>
 
       <label>Gestor Imediato</label>
       <select id="editUserManager">
         <option value="">Nenhum (Topo da Hierarquia)</option>
-        ${managers.map(m => `<option value="${m.id}" ${u.gestorId===m.id?'selected':''}>${m.name} (${ROLE_LABELS[m.role]})</option>`).join('')}
       </select>
       <div id="editUserError" class="login-error hidden" style="margin-top:14px"></div>
     </div>
@@ -194,7 +219,10 @@ function openEditUserModal(userId) {
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
       <button class="btn btn-primary" id="btnEditUser" onclick="submitEditUser('${u.id}', this)">Salvar Alterações</button>
     </div>`);
+
+  // Executa a lógica visual e carrega os gestores
   toggleCompanyField(u.role, 'editUser');
+  updateManagerOptions('editUser', u.companyId, u.gestorId, u.id);
 }
 
 async function submitEditUser(userId, btn) {
