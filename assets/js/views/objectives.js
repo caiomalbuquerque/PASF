@@ -47,6 +47,17 @@ function openObjectiveDetail(objId) {
     return;
   }
   state.currentObjective = objId;
+  
+  // Reseta os filtros ao entrar em um novo objetivo
+  state._taskFilters = {
+    search: '',
+    resp: '',
+    status: '',
+    delivered: 'Todas',
+    sortField: null,
+    sortOrder: 0
+  };
+  
   renderObjectives();
 }
 
@@ -119,7 +130,6 @@ function objectiveSummaryHTML(o, idx, compId){
         </div>
       </div>
 
-      <!-- ALINHAMENTO CORRIGIDO AQUI -->
       <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top: 2px; justify-content:flex-end; align-items: flex-start;">
         <div style="display:flex; flex-direction:column; flex: 1; min-width: 110px; text-align: center;">
           <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em; white-space: nowrap;">Estimativa</span>
@@ -174,7 +184,13 @@ function renderObjectiveDetail(objId, el) {
   const pctPendente = estMensal > 0 ? Math.max(0, 100 - pctRealizado) : 0;
 
   const canAddTask = can('addTask');
-  const filteredTasks = state._objStatus ? allTasks.filter(t => effectiveStatus(t) === state._objStatus) : allTasks;
+  const users = usersOfCompany(compId);
+  
+  // Inicializa os filtros caso não existam
+  if (!state._taskFilters) {
+    state._taskFilters = { search: '', resp: '', status: '', delivered: 'Todas', sortField: null, sortOrder: 0 };
+  }
+  const f = state._taskFilters;
 
   el.innerHTML = `
     <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px; padding-bottom: 16px;">
@@ -189,7 +205,6 @@ function renderObjectiveDetail(objId, el) {
               </h3>
             </div>
 
-            <!-- ALINHAMENTO CORRIGIDO AQUI -->
             <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start;">
               <div style="display: flex; flex-direction: column; flex: 1; min-width: 110px; text-align: center;">
                 <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: .05em; white-space: nowrap;">Estimativa</span>
@@ -229,12 +244,137 @@ function renderObjectiveDetail(objId, el) {
       </div>
     </div>
 
-    <div style="margin-top: 16px;">
-      ${filteredTasks.length > 0 
-        ? filteredTasks.map(t => taskHTML(t, compId, o.id)).join('') 
-        : `<div style="padding: 40px; text-align: center; background: #fff; border: 1px dashed var(--gray-300); border-radius: var(--radius-lg); color: var(--gray-500);">Nenhuma tarefa encontrada.</div>`}
+    <!-- BARRA DE FILTROS -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; margin-bottom: 12px;">
+      
+      <!-- Filtros (Esquerda) -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1;">
+        <input type="text" id="taskSearch" placeholder="Buscar descrição..." value="${escapeHtml(f.search)}" style="padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; width: 200px; outline: none;">
+        
+        <select id="taskFilterResp" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; max-width: 150px;">
+          <option value="">Todos os responsáveis</option>
+          ${users.map(u => `<option value="${u.id}" ${f.resp===u.id?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
+        </select>
+
+        <select id="taskFilterStatus" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none;">
+          <option value="">Todos os status</option>
+          ${ALL_STATUS.map(s => `<option ${f.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+
+        <select id="taskFilterDelivered" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none;">
+          <option value="Todas" ${f.delivered==='Todas'?'selected':''}>Entregue: Todas</option>
+          <option value="Zeradas" ${f.delivered==='Zeradas'?'selected':''}>Entregue: Zeradas</option>
+          <option value="Valoradas" ${f.delivered==='Valoradas'?'selected':''}>Entregue: Valoradas</option>
+        </select>
+      </div>
+
+      <!-- Classificação (Direita) -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="btnSortStart" class="btn btn-sm btn-ghost" onclick="toggleSort('startDate')" style="border: 1px solid var(--gray-300); background: #fff;">
+          Início <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('startDate')}</span>
+        </button>
+        <button id="btnSortEnd" class="btn btn-sm btn-ghost" onclick="toggleSort('endDate')" style="border: 1px solid var(--gray-300); background: #fff;">
+          Conclusão <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('endDate')}</span>
+        </button>
+      </div>
     </div>
+
+    <!-- CONTAINER DE TAREFAS (Atualizado via JS) -->
+    <div id="task-list-container"></div>
   `;
+
+  // Eventos de Filtro (Atualizam o state e aplicam o filtro na lista, sem refazer os inputs)
+  const refreshList = () => applyTaskFilters(compId, o.id);
+  
+  $('taskSearch').addEventListener('input', e => { f.search = e.target.value; refreshList(); });
+  $('taskFilterResp').addEventListener('change', e => { f.resp = e.target.value; refreshList(); });
+  $('taskFilterStatus').addEventListener('change', e => { f.status = e.target.value; refreshList(); });
+  $('taskFilterDelivered').addEventListener('change', e => { f.delivered = e.target.value; refreshList(); });
+
+  applyTaskFilters(compId, o.id); // Renderiza a lista inicial
+}
+
+function getSortIcon(field) {
+  const f = state._taskFilters;
+  if (f.sortField !== field || f.sortOrder === 0) return '⇅';
+  if (f.sortOrder === 1) return '↓';
+  return '↑';
+}
+
+function toggleSort(field) {
+  const f = state._taskFilters;
+  
+  if (f.sortField !== field) {
+    f.sortField = field;
+    f.sortOrder = 1; // Asc
+  } else {
+    f.sortOrder++;
+    if (f.sortOrder > 2) {
+      f.sortOrder = 0;
+      f.sortField = null;
+    }
+  }
+
+  // Atualiza apenas os ícones dos botões
+  const btnStart = $('btnSortStart');
+  const btnEnd = $('btnSortEnd');
+  if(btnStart) btnStart.innerHTML = `Início <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('startDate')}</span>`;
+  if(btnEnd) btnEnd.innerHTML = `Conclusão <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('endDate')}</span>`;
+
+  applyTaskFilters(state.currentCompany, state.currentObjective);
+}
+
+function applyTaskFilters(compId, objId) {
+  const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
+  if (!o) return;
+
+  let tasks = [...o.tasks];
+  const f = state._taskFilters;
+
+  // 1. Filtro por Busca (Descrição)
+  if (f.search) {
+    tasks = tasks.filter(t => (t.description || '').toLowerCase().includes(f.search.toLowerCase()));
+  }
+
+  // 2. Filtro por Responsável
+  if (f.resp) {
+    tasks = tasks.filter(t => String(t.responsibleId) === String(f.resp));
+  }
+
+  // 3. Filtro por Status
+  if (f.status) {
+    tasks = tasks.filter(t => effectiveStatus(t) === f.status);
+  }
+
+  // 4. Filtro por Entregue (Zeradas / Valoradas)
+  if (f.delivered === 'Zeradas') {
+    tasks = tasks.filter(t => (+t.result || 0) === 0);
+  } else if (f.delivered === 'Valoradas') {
+    tasks = tasks.filter(t => (+t.result || 0) > 0);
+  }
+
+  // 5. Classificação (Sort)
+  if (f.sortField && f.sortOrder > 0) {
+    tasks.sort((a, b) => {
+      const valA = a[f.sortField] || '';
+      const valB = b[f.sortField] || '';
+      
+      if (!valA && valB) return 1;
+      if (valA && !valB) return -1;
+      if (!valA && !valB) return 0;
+
+      if (valA < valB) return f.sortOrder === 1 ? -1 : 1;
+      if (valA > valB) return f.sortOrder === 1 ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const container = $('task-list-container');
+  if (container) {
+    container.innerHTML = tasks.length > 0 
+      ? tasks.map(t => taskHTML(t, compId, o.id)).join('')
+      : `<div style="padding: 40px; text-align: center; background: #fff; border: 1px dashed var(--gray-300); border-radius: var(--radius-lg); color: var(--gray-500);">Nenhuma tarefa encontrada com estes filtros.</div>`;
+  }
 }
 
 function updateObjectiveMetrics(objId, compId) {
