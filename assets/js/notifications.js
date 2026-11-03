@@ -72,7 +72,7 @@ async function openNotif(notifId){
     const { error } = await window.db.from('notifications')
       .update({ is_read: true })
       .eq('id', notifId);
-      
+
     if (error) console.error('Erro ao marcar notificação como lida:', error);
     n.read = true;
   }
@@ -80,40 +80,19 @@ async function openNotif(notifId){
   renderNotificationsBadge();
   document.querySelector('.notif-panel')?.remove();
   $('bellBtn').classList.remove('active');
-  
+
   if(n.taskId){
     const found = findTask(n.taskId);
     if(found){
-      // ✔ CORRIGIDO: Number() evita que state.currentCompany vire string,
-      // quebrando comparações estritas em renderUsers / permissões.
       state.currentCompany = Number(found.compId);
-      renderTopbar(); // ✔ CORRIGIDO: sincroniza o seletor de empresa da topbar
+      renderTopbar();
 
-      showView('objetivos');
+      showView('objetivos');            // este showView zera currentObjective...
+      state.currentObjective = found.objective.id;  // ...então definimos depois
+      renderObjectives();               // abre a tela de detalhe do objetivo
 
       setTimeout(() => {
-        const objEl = $(`obj-${found.objective.id}`);
-        if(objEl && !objEl.classList.contains('open') && typeof toggleObjective === 'function'){
-          toggleObjective(found.objective.id);
-        }
-
-        const taskEl = $(`task-${n.taskId}`);
-        if(taskEl && !taskEl.classList.contains('open')) toggleTask(n.taskId);
-
-        taskEl?.scrollIntoView({behavior:'smooth', block:'center'});
-
-        // ✔ CORRIGIDO: guarda contra taskEl nulo (evita TypeError
-        // quando a tarefa não está renderizada na lista).
-        if (n.targetField && taskEl) {
-          setTimeout(() => {
-            const targetInput = taskEl.querySelector(`[data-field="${n.targetField}"]`);
-            if (targetInput) {
-              targetInput.focus();
-              targetInput.classList.add('pulse-highlight');
-              setTimeout(() => targetInput.classList.remove('pulse-highlight'), 3500);
-            }
-          }, 350);
-        }
+        openTaskModal(found.compId, found.objective.id, n.taskId, n.targetField);
       }, 100);
     }
   }
