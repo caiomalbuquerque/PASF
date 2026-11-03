@@ -3,13 +3,11 @@
 function renderObjectives(){
   const el = $('view-objetivos');
   
-  // Se tem um objetivo selecionado, renderiza a tela de detalhes
   if (state.currentObjective) {
     renderObjectiveDetail(state.currentObjective, el);
     return;
   }
 
-  // Se não, renderiza a lista de objetivos
   const isGlobal = can('scope') === 'all';
   if (!el.querySelector('#obj-header-container')) {
     let headerHTML = `
@@ -43,8 +41,6 @@ function renderObjectives(){
   renderObjectivesListOnly();
 }
 
-// ✔ CORRIGIDO: versão única — guarda contra objetivo ainda "pending"
-// (a duplicata abaixo, que sobrescrevia essa função, foi removida).
 function openObjectiveDetail(objId) {
   if (String(objId).startsWith('temp_')) {
     showToast("Aguarde — objetivo ainda sendo criado…", "info");
@@ -93,7 +89,6 @@ function renderObjectivesListOnly(){
   elList.innerHTML = body;
 }
 
-// O CARTÃO DA LISTA (Sem as tarefas dentro)
 function objectiveSummaryHTML(o, idx, compId){
   const allTasks = o.tasks;
   const done = allTasks.filter(t => effectiveStatus(t) === 'Concluída').length;
@@ -158,7 +153,6 @@ function objectiveSummaryHTML(o, idx, compId){
   </div>`;
 }
 
-// A TELA DE DETALHES DO OBJETIVO (COM CABEÇALHO FIXO)
 function renderObjectiveDetail(objId, el) {
   let compId = null;
   let o = null;
@@ -188,65 +182,68 @@ function renderObjectiveDetail(objId, el) {
     <!-- CONTAINER FIXO (STICKY) -->
     <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px;">
       
-      <!-- Botão Voltar -->
-      <div style="margin-bottom: 12px;">
-        <button class="btn btn-ghost" onclick="closeObjectiveDetail()" style="padding: 6px 12px; font-size: 13px; background: #fff; border: 1px solid var(--gray-300); box-shadow: var(--shadow-sm);">
-          &larr; Voltar para Objetivos
-        </button>
-      </div>
+      <div style="display: flex; gap: 12px; align-items: stretch; margin-bottom: 12px;">
+        
+        <!-- Botão Voltar (Ícone Compacto) -->
+        <div style="display: flex; align-items: flex-start; padding-top: 16px;">
+          <button class="btn btn-ghost" onclick="closeObjectiveDetail()" style="padding: 8px; border-radius: 50%; background: #fff; border: 1px solid var(--gray-300); box-shadow: var(--shadow-sm); width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--gray-600);" title="Voltar para Objetivos" onmouseover="this.style.color='var(--primary)'; this.style.borderColor='var(--primary)'" onmouseout="this.style.color='var(--gray-600)'; this.style.borderColor='var(--gray-300)'">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          </button>
+        </div>
 
-      <!-- Cabeçalho do Objetivo -->
-      <div class="objective-card" style="box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
-        <div class="objective-header" style="align-items: flex-start; padding: 20px; background: #fff; border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);">
-          <div style="display:flex; gap:14px; flex: 1; min-width: 250px; flex-wrap: wrap;">
-            <div style="flex:1; min-width: 200px;">
-              ${isEditing ? `
-                <div style="display:flex; flex-direction: column; width: 100%;">
-                  <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
-                         class="task-title-input"
-                         onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')"
-                         onblur="setTimeout(() => saveObjectiveTitle('${compId}','${o.id}'), 150)"
-                         onkeydown="if(event.key === 'Escape') cancelEditObjective('${o.id}', '${compId}')">
+        <!-- Cabeçalho do Objetivo -->
+        <div class="objective-card" style="flex: 1; box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+          <div class="objective-header" style="align-items: flex-start; padding: 20px; background: #fff; border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);">
+            <div style="display:flex; gap:14px; flex: 1; min-width: 250px; flex-wrap: wrap;">
+              <div style="flex:1; min-width: 200px;">
+                ${isEditing ? `
+                  <div style="display:flex; flex-direction: column; width: 100%;">
+                    <input type="text" id="edit-obj-title-${o.id}" value="${escapeHtml(o.title)}" 
+                           class="task-title-input"
+                           onkeypress="if(event.key === 'Enter') saveObjectiveTitle('${compId}','${o.id}')"
+                           onblur="setTimeout(() => saveObjectiveTitle('${compId}','${o.id}'), 150)"
+                           onkeydown="if(event.key === 'Escape') cancelEditObjective('${o.id}', '${compId}')">
+                  </div>
+                ` : `
+                  <h3 style="font-size:20px; line-height:1.3; margin:0; word-break: break-word; ${canEditObj ? 'cursor:text; transition: color 0.2s;' : ''}" 
+                      onclick="${canEditObj ? `startEditObjective('${o.id}', '${compId}')` : ''}"
+                      onmouseover="${canEditObj ? 'this.style.color=\'var(--primary)\'' : ''}" 
+                      onmouseout="${canEditObj ? 'this.style.color=\'\'' : ''}">
+                    ${escapeHtml(o.title)}
+                  </h3>
+                `}
+                <div class="meta" style="margin-top: 8px; display:flex; gap:12px;">
+                  <span id="meta-done-${o.id}" style="font-weight:600; color:var(--gray-500); font-size: 13px;">${done}/${allTasks.length} tarefas concluídas</span>
+                  <span id="meta-late-${o.id}" class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; ${late === 0 ? 'display:none' : ''}">${late} em atraso</span>
                 </div>
-              ` : `
-                <h3 style="font-size:20px; line-height:1.3; margin:0; word-break: break-word; ${canEditObj ? 'cursor:text; transition: color 0.2s;' : ''}" 
-                    onclick="${canEditObj ? `startEditObjective('${o.id}', '${compId}')` : ''}"
-                    onmouseover="${canEditObj ? 'this.style.color=\'var(--primary)\'' : ''}" 
-                    onmouseout="${canEditObj ? 'this.style.color=\'\'' : ''}">
-                  ${escapeHtml(o.title)}
-                </h3>
-              `}
-              <div class="meta" style="margin-top: 8px; display:flex; gap:12px;">
-                <span id="meta-done-${o.id}" style="font-weight:600; color:var(--gray-500); font-size: 13px;">${done}/${allTasks.length} tarefas concluídas</span>
-                <span id="meta-late-${o.id}" class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; ${late === 0 ? 'display:none' : ''}">${late} em atraso</span>
               </div>
             </div>
-          </div>
 
-          <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 10px; text-align:center; justify-content:flex-end;">
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
-              <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
-              <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
-              <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
-              <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
-              <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
-              <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
+            <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 10px; text-align:center; justify-content:flex-end;">
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Estimativa Mensal</span>
+                <span style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${fmtBRL(estMensal)}</span>
+              </div>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Entregue</span>
+                <span id="metric-entregue-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${resultadoEntregue > 0 ? fmtBRL(resultadoEntregue) : '—'}</span>
+              </div>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Custos Envolvidos</span>
+                <span id="metric-cost-${o.id}" style="font-size:14px; font-weight:800; color:var(--gray-800); margin-top:4px">${totalCost > 0 ? fmtBRL(totalCost) : '—'}</span>
+              </div>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">Saldo</span>
+                <span id="metric-saldo-${o.id}" style="font-size:14px; font-weight:800; color:${saldo >= 0 ? 'var(--gray-800)' : 'var(--danger)'}; margin-top:4px">${saldo !== 0 ? fmtBRL(saldo) : '—'}</span>
+              </div>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Realizado</span>
+                <span id="metric-pct-${o.id}" style="font-size:14px; font-weight:800; color:var(--primary); margin-top:4px">${pctRealizado.toFixed(1)}%</span>
+              </div>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gray-500); letter-spacing:.05em">% Pendente</span>
+                <span id="metric-pend-${o.id}" style="font-size:14px; font-weight:800; color:${pctPendente > 0 ? 'var(--warning)' : 'var(--gray-800)'}; margin-top:4px">${pctPendente.toFixed(1)}%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -323,7 +320,7 @@ function updateObjectiveMetrics(objId, compId) {
 
 function refreshObjectiveDOM(objId, compId) {
   if (state.currentObjective && String(state.currentObjective) === String(objId)) {
-    renderObjectives(); // Atualiza a tela inteira se estiver nos detalhes
+    renderObjectives();
     return;
   }
   const o = (state.objectives[compId] || []).find(x => String(x.id) === String(objId));
