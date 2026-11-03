@@ -98,7 +98,6 @@
 let realtimeRenderTimeout;
 let realtimeObjTimeout;
 
-// ✔ NOVO: compara os campos relevantes de uma task local com o payload do banco
 function taskValuesEqual(lt, dbTask){
   return String(lt.description || '')      === String(dbTask.description || '') &&
          String(lt.responsibleId || '')    === String(dbTask.responsible_id || '') &&
@@ -111,11 +110,10 @@ function taskValuesEqual(lt, dbTask){
          String(lt.sort_order || 0)        === String(dbTask.sort_order || 0);
 }
 
-// ✔ NOVO: o usuário está com o cursor dentro de um card editável?
 function userIsEditing(){
   const a = document.activeElement;
   if (!a) return false;
-  if (a.closest && a.closest('.task-card.open, .objective-card')) return true;
+  if (a.closest && a.closest('.task-card.open, .objective-card, .modal')) return true;
   return false;
 }
 
@@ -132,26 +130,21 @@ function initRealtime(){
     })
     .subscribe();
 
-  // 2. Tasks realtime — COM PROTEÇÃO CONTRA ECO PRÓPRIO
+  // 2. Tasks realtime
   window.db.channel('tasks_realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
       if (payload.eventType === 'DELETE') return;
-      
       const updatedTask = payload.new;
 
-      // ✔ CORRIGIDO: se é eco da nossa própria edição, só atualiza métricas e sai.
-      // Isso evita re-renderizar a tela inteira enquanto o usuário digita.
       const localFound = findTask(updatedTask.id);
       if (localFound && taskValuesEqual(localFound.task, updatedTask)) {
         updateObjectiveMetrics(localFound.objective.id, localFound.compId);
         return;
       }
 
-      // ✔ CORRIGIDO: se o usuário está com foco em algum campo, NÃO re-renderiza.
-      // Apenas atualiza o state em memória — o próximo render natural vai pegar.
       const isEditing = userIsEditing();
-
       let foundAny = false;
+      
       Object.keys(state.objectives).forEach(compId => {
         state.objectives[compId].forEach(obj => {
           const taskIndex = obj.tasks.findIndex(t => String(t.id) === String(updatedTask.id));
@@ -173,8 +166,7 @@ function initRealtime(){
 
       clearTimeout(realtimeRenderTimeout);
       realtimeRenderTimeout = setTimeout(() => {
-        if (isEditing) return; // ✔ respeita edição em curso
-
+        if (isEditing) return;
         const activeView = document.querySelector('.nav-item.active')?.dataset.view;
         const found = findTask(updatedTask.id);
 
@@ -192,21 +184,18 @@ function initRealtime(){
     })
     .subscribe();
 
-  // 3. Objectives realtime — COM PROTEÇÃO CONTRA ECO PRÓPRIO
+  // 3. Objectives realtime
   window.db.channel('objectives_realtime')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'objectives' }, payload => {
       const updatedObj = payload.new;
-      
       Object.keys(state.objectives).forEach(compId => {
         const objIndex = state.objectives[compId].findIndex(o => String(o.id) === String(updatedObj.id));
         if (objIndex !== -1) {
           const localObj = state.objectives[compId][objIndex];
-
-          // ✔ CORRIGIDO: eco da nossa própria edição → não re-renderiza
-          const sameTitle   = String(localObj.title || '')          === String(updatedObj.title || '');
-          const sameSavings = String(localObj.monthlySavings || 0)  === String(updatedObj.monthly_savings || 0);
+          const sameTitle   = String(localObj.title || '') === String(updatedObj.title || '');
+          const sameSavings = String(localObj.monthlySavings || 0) === String(updatedObj.monthly_savings || 0);
+          
           if (sameTitle && sameSavings) return;
-
           localObj.title = updatedObj.title;
           localObj.monthlySavings = updatedObj.monthly_savings;
 
@@ -221,12 +210,10 @@ function initRealtime(){
     })
     .subscribe();
 
-  // 4. Canal de Status do Usuário (Para derrubar se for suspenso)
+  // 4. Status do Próprio Usuário (Suspensão)
   window.db.channel(`user_status:${state.currentUser.id}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${state.currentUser.id}` }, payload => {
       const updatedProfile = payload.new;
-      
-      // Se o status mudou para falso (suspenso), ou se o perfil mudou de ativo para inativo
       if (updatedProfile.is_active === false) {
         showToast("Sua conta foi suspensa pelo administrador.", "error");
         setTimeout(async () => {
@@ -236,5 +223,45 @@ function initRealtime(){
       }
     })
     .subscribe();
-  
+
+  // 5. Canal de Usuários (Novos cadastros e Alterações de Nome)
+  window.db.channel('profiles_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
+      // Se for o próprio usuário, o canal 4 já lida com a suspensão, ignoramos aqui.
+      if (payload.new && payload.new.id === state.currentUser.id && payload.eventType === 'UPDATE') {
+        // Apenas atualiza o nome no state se ele mudou
+        state.currentUser.name = payload.new.name;
+        renderTopbar(); 
+      }
+
+      if (payload.eventType === 'INSERT') {
+        // Novo usuário cadastrado
+        const mappedUser = { ...payload.new, companyId: payload.new.company_id, gestorId: payload.new.manager_id };
+        state.users.push(mappedUser);
+        showToast(`Novo usuário cadastrado: ${payload.new.name}`, "success");
+      } 
+      else if (payload.eventType === 'UPDATE') {
+        // Usuário atualizado (Nome, Role, etc)
+        const idx = state.users.findIndex(u => u.id === payload.new.id);
+        if (idx !== -1) {
+          state.users[idx] = { ...state.users[idx], ...payload.new, companyId: payload.new.company_id, gestorId: payload.new.manager_id };
+        }
+      }
+      else if (payload.eventType === 'DELETE') {
+        state.users = state.users.filter(u => u.id === payload.old.id);
+      }
+
+      // Re-renderizar a tela que o Admin/Global está vendo no momento
+      const activeView = document.querySelector('.nav-item.active')?.dataset.view;
+      if (activeView === 'responsaveis') {
+        if (typeof renderUsersTable === 'function') renderUsersTable();
+      } else if (activeView === 'objetivos') {
+        renderObjectives(); // Atualiza os nomes nos cartões
+      } else if (activeView === 'minhas') {
+        renderMyTasks();
+      } else if (activeView === 'dashboard') {
+        renderDashboard();
+      }
+    })
+    .subscribe();
 }
