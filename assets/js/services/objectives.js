@@ -4,7 +4,6 @@ async function updateSavings(compId, objId, value){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if (!o) return;
 
-  // ✔ CORRIGIDO (optimistic)
   const oldSavings = o.monthlySavings;
   o.monthlySavings = +value || 0;
   updateObjectiveMetrics(objId, compId);
@@ -29,7 +28,6 @@ async function updateObjectiveTitle(compId, objId, value){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if (!o) return;
 
-  // ✔ CORRIGIDO (optimistic)
   const oldTitle = o.title;
   o.title = title;
 
@@ -37,8 +35,10 @@ async function updateObjectiveTitle(compId, objId, value){
   if (error) {
     o.title = oldTitle;
     showToast("Erro ao salvar nome do objetivo: " + error.message, "error");
+    renderObjectives(); // ✔ CORRIGIDO: refresca a tela mesmo no erro
     return;
   }
+  renderObjectives(); // ✔ CORRIGIDO: garante que o <h3> substitua o input de edição
   showToast("Nome do objetivo atualizado!", "success");
 }
 
@@ -47,12 +47,20 @@ async function deleteObjective(compId, objId){
 
   const backup = (state.objectives[compId]||[]).slice();
   state.objectives[compId] = (state.objectives[compId]||[]).filter(o => o.id !== objId);
-  renderObjectivesListOnly();
+
+  // ✔ CORRIGIDO: se estamos visualizando este objetivo, precisamos sair para a lista
+  const wasViewing = String(state.currentObjective) === String(objId);
+  if (wasViewing) state.currentObjective = null;
+
+  // ✔ CORRIGIDO: renderObjectives() dispatcha entre lista e detalhe.
+  // Antes, renderObjectivesListOnly() era no-op na tela de detalhe.
+  renderObjectives();
 
   const { error } = await window.db.from('objectives').delete().eq('id', objId);
   if (error) {
     state.objectives[compId] = backup;
-    renderObjectivesListOnly();
+    if (wasViewing) state.currentObjective = objId;
+    renderObjectives();
     showToast("Erro ao remover objetivo.", "error");
     return;
   }
@@ -63,7 +71,6 @@ async function createObjective(title, savings){
   const compId = Number(state.currentCompany);
   const tempId = 'temp_' + uid();
 
-  // ✔ CORRIGIDO (optimistic): aparece IMEDIATAMENTE
   const optimistic = {
     id: tempId,
     company_id: compId,
@@ -77,7 +84,7 @@ async function createObjective(title, savings){
 
   if(!state.objectives[compId]) state.objectives[compId] = [];
   state.objectives[compId].push(optimistic);
-  renderObjectivesListOnly();
+  renderObjectives(); // ✔ CORRIGIDO: era renderObjectivesListOnly()
 
   const { data, error } = await window.db.from('objectives').insert([{
     company_id: compId,
@@ -87,7 +94,7 @@ async function createObjective(title, savings){
 
   if (error) {
     state.objectives[compId] = state.objectives[compId].filter(o => o.id !== tempId);
-    renderObjectivesListOnly();
+    renderObjectives();
     showToast("Erro ao criar objetivo: " + error.message, "error");
     return;
   }
@@ -101,7 +108,7 @@ async function createObjective(title, savings){
       created_at: data.created_at || new Date().toISOString()
     };
   }
-  renderObjectivesListOnly();
+  renderObjectives();
   showToast("Objetivo criado com sucesso!", "success");
 }
 
@@ -139,7 +146,7 @@ async function handleDrop(e, targetTaskId, objId, compId) {
   const [movedTask] = tasks.splice(draggedIdx, 1);
   tasks.splice(targetIdx, 0, movedTask);
 
-  renderObjectivesListOnly();
+  renderObjectives(); // ✔ CORRIGIDO: era renderObjectivesListOnly(), que é no-op na tela de detalhe
 
   try {
     const updates = tasks.map((t, i) => {
