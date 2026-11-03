@@ -6,8 +6,6 @@ const ROLE_LABELS = {
   unique_collaborator: 'Gestor',
   unique_leader:       'Líder',
   unique_user:         'Usuário Padrão',
-  
-  // Mantidos no sistema para não quebrar usuários antigos que ainda tenham esses perfis no banco
   global_viewer:       'Viewer Global',
   unique_viewer:       'Viewer'
 };
@@ -26,10 +24,17 @@ const ROLE_COLORS = {
 
 /* Permissões por papel */
 const PERMS = {
+  // Admin e Global: vê tudo, edita tudo, gerencia usuários
   admin:               { scope:'all', createObj:true,  editObj:true,  delObj:true,  addTask:true,  editTask:true,  delTask:true,  manageUsers:true,  seeUsers:true,  seeCompanies:true  },
   global_collaborator: { scope:'all', createObj:true,  editObj:true,  delObj:true,  addTask:true,  editTask:true,  delTask:true,  manageUsers:true,  seeUsers:true,  seeCompanies:true  },
-  unique_collaborator: { scope:'own', createObj:true,  editObj:true,  delObj:true,  addTask:true,  editTask:true,  delTask:true,  manageUsers:true,  seeUsers:true,  seeCompanies:false },
+  
+  // Gestor: edita objetivos e tarefas da sua unidade, MAS NÃO VÊ USUÁRIOS
+  unique_collaborator: { scope:'own', createObj:true,  editObj:true,  delObj:true,  addTask:true,  editTask:true,  delTask:true,  manageUsers:false, seeUsers:false, seeCompanies:false },
+  
+  // Líder: edita todas as tarefas, sem acessos administrativos
   unique_leader:       { scope:'own', createObj:false, editObj:false, delObj:false, addTask:true,  editTask:true,  delTask:true,  manageUsers:false, seeUsers:false, seeCompanies:false },
+  
+  // Usuário Padrão: Edita apenas as tarefas destinadas a ele
   unique_user:         { scope:'own', createObj:false, editObj:false, delObj:false, addTask:false, editTask:true,  delTask:false, manageUsers:false, seeUsers:false, seeCompanies:false },
   
   global_viewer:       { scope:'all', createObj:false, editObj:false, delObj:false, addTask:false, editTask:false, delTask:false, manageUsers:false, seeUsers:false, seeCompanies:true  },
