@@ -48,7 +48,6 @@ function openObjectiveDetail(objId) {
   }
   state.currentObjective = objId;
   
-  // Reseta os filtros ao entrar em um novo objetivo
   state._taskFilters = {
     search: '',
     resp: '',
@@ -186,14 +185,14 @@ function renderObjectiveDetail(objId, el) {
   const canAddTask = can('addTask');
   const users = usersOfCompany(compId);
   
-  // Inicializa os filtros caso não existam
   if (!state._taskFilters) {
     state._taskFilters = { search: '', resp: '', status: '', delivered: 'Todas', sortField: null, sortOrder: 0 };
   }
   const f = state._taskFilters;
 
   el.innerHTML = `
-    <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px; padding-bottom: 16px;">
+    <!-- Margem inferior reduzida para aproximar do filtro -->
+    <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px; padding-bottom: 8px;">
       
       <div class="objective-card" style="box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; cursor: pointer; transition: var(--transition); border-radius: var(--radius-lg);" onclick="openObjectiveModal('${compId}', '${o.id}')" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
         <div class="objective-header" style="display: block; padding: 20px; background: #fff; border-radius: var(--radius-lg);">
@@ -244,46 +243,42 @@ function renderObjectiveDetail(objId, el) {
       </div>
     </div>
 
-    <!-- BARRA DE FILTROS -->
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; margin-bottom: 12px;">
+    <!-- BARRA DE FILTROS (Margem superior reduzida) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 8px; margin-bottom: 12px;">
       
-      <!-- Filtros (Esquerda) -->
       <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1;">
         <input type="text" id="taskSearch" placeholder="Buscar descrição..." value="${escapeHtml(f.search)}" style="padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; width: 200px; outline: none;">
         
-        <select id="taskFilterResp" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; max-width: 150px;">
+        <select id="taskFilterResp" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 220px;">
           <option value="">Todos os responsáveis</option>
           ${users.map(u => `<option value="${u.id}" ${f.resp===u.id?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
         </select>
 
-        <select id="taskFilterStatus" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none;">
+        <select id="taskFilterStatus" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 150px;">
           <option value="">Todos os status</option>
           ${ALL_STATUS.map(s => `<option ${f.status===s?'selected':''}>${s}</option>`).join('')}
         </select>
 
-        <select id="taskFilterDelivered" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none;">
+        <select id="taskFilterDelivered" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 150px;">
           <option value="Todas" ${f.delivered==='Todas'?'selected':''}>Entregue: Todas</option>
           <option value="Zeradas" ${f.delivered==='Zeradas'?'selected':''}>Entregue: Zeradas</option>
           <option value="Valoradas" ${f.delivered==='Valoradas'?'selected':''}>Entregue: Valoradas</option>
         </select>
       </div>
 
-      <!-- Classificação (Direita) -->
       <div style="display: flex; gap: 8px; align-items: center;">
-        <button id="btnSortStart" class="btn btn-sm btn-ghost" onclick="toggleSort('startDate')" style="border: 1px solid var(--gray-300); background: #fff;">
+        <button id="btnSortStart" class="btn btn-sm btn-ghost" onclick="toggleSort('startDate', '${compId}', '${o.id}')" style="border: 1px solid var(--gray-300); background: #fff;">
           Início <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('startDate')}</span>
         </button>
-        <button id="btnSortEnd" class="btn btn-sm btn-ghost" onclick="toggleSort('endDate')" style="border: 1px solid var(--gray-300); background: #fff;">
+        <button id="btnSortEnd" class="btn btn-sm btn-ghost" onclick="toggleSort('endDate', '${compId}', '${o.id}')" style="border: 1px solid var(--gray-300); background: #fff;">
           Conclusão <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('endDate')}</span>
         </button>
       </div>
     </div>
 
-    <!-- CONTAINER DE TAREFAS (Atualizado via JS) -->
     <div id="task-list-container"></div>
   `;
 
-  // Eventos de Filtro (Atualizam o state e aplicam o filtro na lista, sem refazer os inputs)
   const refreshList = () => applyTaskFilters(compId, o.id);
   
   $('taskSearch').addEventListener('input', e => { f.search = e.target.value; refreshList(); });
@@ -291,7 +286,7 @@ function renderObjectiveDetail(objId, el) {
   $('taskFilterStatus').addEventListener('change', e => { f.status = e.target.value; refreshList(); });
   $('taskFilterDelivered').addEventListener('change', e => { f.delivered = e.target.value; refreshList(); });
 
-  applyTaskFilters(compId, o.id); // Renderiza a lista inicial
+  applyTaskFilters(compId, o.id); 
 }
 
 function getSortIcon(field) {
@@ -301,12 +296,13 @@ function getSortIcon(field) {
   return '↑';
 }
 
-function toggleSort(field) {
+// Correção: Recebendo compId e objId para atualizar corretamente
+function toggleSort(field, compId, objId) {
   const f = state._taskFilters;
   
   if (f.sortField !== field) {
     f.sortField = field;
-    f.sortOrder = 1; // Asc
+    f.sortOrder = 1;
   } else {
     f.sortOrder++;
     if (f.sortOrder > 2) {
@@ -315,13 +311,12 @@ function toggleSort(field) {
     }
   }
 
-  // Atualiza apenas os ícones dos botões
   const btnStart = $('btnSortStart');
   const btnEnd = $('btnSortEnd');
   if(btnStart) btnStart.innerHTML = `Início <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('startDate')}</span>`;
   if(btnEnd) btnEnd.innerHTML = `Conclusão <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('endDate')}</span>`;
 
-  applyTaskFilters(state.currentCompany, state.currentObjective);
+  applyTaskFilters(compId, objId);
 }
 
 function applyTaskFilters(compId, objId) {
@@ -331,29 +326,24 @@ function applyTaskFilters(compId, objId) {
   let tasks = [...o.tasks];
   const f = state._taskFilters;
 
-  // 1. Filtro por Busca (Descrição)
   if (f.search) {
     tasks = tasks.filter(t => (t.description || '').toLowerCase().includes(f.search.toLowerCase()));
   }
 
-  // 2. Filtro por Responsável
   if (f.resp) {
     tasks = tasks.filter(t => String(t.responsibleId) === String(f.resp));
   }
 
-  // 3. Filtro por Status
   if (f.status) {
     tasks = tasks.filter(t => effectiveStatus(t) === f.status);
   }
 
-  // 4. Filtro por Entregue (Zeradas / Valoradas)
   if (f.delivered === 'Zeradas') {
     tasks = tasks.filter(t => (+t.result || 0) === 0);
   } else if (f.delivered === 'Valoradas') {
     tasks = tasks.filter(t => (+t.result || 0) > 0);
   }
 
-  // 5. Classificação (Sort)
   if (f.sortField && f.sortOrder > 0) {
     tasks.sort((a, b) => {
       const valA = a[f.sortField] || '';
