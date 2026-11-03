@@ -67,11 +67,9 @@ function renderUsersTable() {
   const scopeAll = can('scope') === 'all';
   const f = state._userFilters;
   
-  // Base da lista: Admin só não vê a si mesmo na lista, mas vê os outros admins? Vamos ocultar todos os admins para não haver exclusão acidental.
   let list = scopeAll ? state.users : state.users.filter(u => u.companyId === state.currentCompany || u.role === 'global_collaborator');
   list = list.filter(u => u.role !== 'admin');
 
-  // Aplica filtros
   if (f.name) list = list.filter(u => u.name.toLowerCase().includes(f.name.toLowerCase()) || u.email.toLowerCase().includes(f.name.toLowerCase()));
   if (f.role) list = list.filter(u => u.role === f.role);
   if (f.company) list = list.filter(u => String(u.companyId) === String(f.company));
@@ -93,20 +91,30 @@ function renderUsersTable() {
           const gestor = u.gestorId ? userById(u.gestorId)?.name : '—';
           const count = allTasksFlat().filter(t => t.responsibleId === u.id).length;
           const color = ROLE_COLORS[u.role] || '#999';
+          const isSuspended = u.is_active === false;
           
-          return `<tr>
+          return `<tr style="${isSuspended ? 'opacity: 0.5; background: #f9fafb;' : ''}">
             <td><div style="display:flex;align-items:center;gap:10px">
-              <div class="avatar" style="width:28px;height:28px;font-size:10px;background:${color}">${initials(u.name)}</div>
-              <strong>${escapeHtml(u.name)}</strong></div></td>
+              <div class="avatar" style="width:28px;height:28px;font-size:10px;background:${isSuspended ? '#9ca3af' : color}">${initials(u.name)}</div>
+              <strong>${escapeHtml(u.name)} ${isSuspended ? '<span style="color:var(--danger);font-size:10px;margin-left:6px;border:1px solid var(--danger);padding:1px 4px;border-radius:4px;">SUSPENSO</span>' : ''}</strong>
+            </div></td>
             <td>${u.email}</td>
-            <td><span class="tag" style="background:${color}22;color:${color}">${ROLE_LABELS[u.role] || u.role}</span></td>
+            <td><span class="tag" style="background:${isSuspended ? '#9ca3af' : color}22;color:${isSuspended ? '#9ca3af' : color}">${ROLE_LABELS[u.role] || u.role}</span></td>
             <td>${comp}</td>
             <td>${gestor}</td>
             <td>${count}</td>
-            <td>
+            <td style="display:flex; gap:4px;">
               ${can('manageUsers') ? `
                 <button class="btn btn-sm btn-ghost" style="padding:4px 8px" onclick="openEditUserModal('${u.id}')" title="Editar">✎</button>
                 <button class="btn btn-sm btn-ghost" style="padding:4px 8px" onclick="resetUserPassword('${u.email}')" title="Redefinir Senha">🔑</button>
+                
+                <!-- BOTÃO DE SUSPENDER / ATIVAR -->
+                <button class="btn btn-sm btn-ghost" style="padding:4px 8px; color:${isSuspended ? 'var(--accent-dark)' : 'var(--warning)'};" onclick="toggleUserStatus('${u.id}', ${u.is_active !== false})" title="${isSuspended ? 'Reativar Acesso' : 'Suspender Acesso'}">
+                  ${isSuspended ? '▶' : '⏸'}
+                </button>
+
+                <!-- BOTÃO DE EXCLUIR -->
+                <button class="btn btn-sm btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="deleteUserPermanently('${u.id}', '${escapeHtml(u.name)}')" title="Excluir Permanentemente">✕</button>
               ` : '—'}
             </td>
           </tr>`;
@@ -114,6 +122,49 @@ function renderUsersTable() {
       </tbody>
     </table></div>
   `;
+}
+
+// --- NOVAS FUNÇÕES ---
+
+async function toggleUserStatus(userId, currentStatus) {
+  const newStatus = !currentStatus;
+  const actionText = newStatus ? 'reativar' : 'suspender';
+  
+  if(!confirm(`Deseja realmente ${actionText} o acesso deste usuário?`)) return;
+
+  const { error } = await window.db.from('profiles').update({ is_active: newStatus }).eq('id', userId);
+  
+  if (error) {
+    showToast("Erro ao alterar status: " + error.message, "error");
+    return;
+  }
+
+  showToast(`Usuário ${newStatus ? 'reativado' : 'suspenso'} com sucesso!`, "success");
+  
+  // Atualiza o state local
+  const u = state.users.find(x => x.id === userId);
+  if (u) u.is_active = newStatus;
+  
+  renderUsersTable();
+}
+
+async function deleteUserPermanently(userId, userName) {
+  if(!confirm(`⚠️ ATENÇÃO: Deseja excluir o usuário "${userName}" PERMANENTEMENTE?\n\nEssa ação não pode ser desfeita. As tarefas atribuídas a ele ficarão como "Não Atribuído".`)) return;
+
+  // Chama a função RPC (Remote Procedure Call) que criamos no Supabase
+  const { error } = await window.db.rpc('delete_user', { target_user_id: userId });
+  
+  if (error) {
+    showToast("Erro ao excluir usuário: " + error.message, "error");
+    return;
+  }
+
+  showToast("Usuário excluído permanentemente!", "success");
+  
+  // Remove do state local
+  state.users = state.users.filter(u => u.id !== userId);
+  
+  renderUsersTable();
 }
 
 // --- RESETAR SENHA ---
