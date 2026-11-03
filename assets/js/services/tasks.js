@@ -30,15 +30,15 @@ async function updateTask(compId, taskId, field, value){
   if(!found) return;
 
   if (String(taskId).startsWith('temp_')) return;
-  
+
   const oldValue = found.task[field];
   if(String(oldValue||'') === String(value||'')) return;
-  
+
   found.task[field] = value;
   updateObjectiveMetrics(found.objective.id, compId);
 
-  const dbField = field === 'responsibleId' ? 'responsible_id' : 
-                  field === 'startDate' ? 'start_date' : 
+  const dbField = field === 'responsibleId' ? 'responsible_id' :
+                  field === 'startDate' ? 'start_date' :
                   field === 'endDate' ? 'end_date' : field;
 
   const { error } = await window.db.from('tasks').update({ [dbField]: value || null }).eq('id', taskId);
@@ -88,32 +88,25 @@ async function updateTask(compId, taskId, field, value){
 async function addTask(compId, objId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(!o) return;
-  
+
   const firstUser = state.users.find(u => Number(u.companyId) === Number(compId));
   const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
-  
+
   const tempId = 'temp_' + uid();
   const tempTask = {
     id: tempId,
     objective_id: objId,
     description: '',
     responsibleId: firstUser?.id || null,
-    status: 'A iniciar',           // ajuste se seu STATUS_OPTIONS usar capitalização diferente
+    status: 'A Iniciar',
     sort_order: maxOrder + 1,
     attachments: [],
     _pending: true
   };
-  
-  o.tasks.push(tempTask);
-  
-  // ✔ CORRIGIDO: abre a nova tarefa automaticamente para o usuário editar
-  if(!state._openTasks) state._openTasks = [];
-  if(!state._openTasks.includes(String(tempId))) state._openTasks.push(String(tempId));
 
-  // ✔ CORRIGIDO: renderObjectives() em vez de renderObjectivesListOnly()
-  // (esta última é no-op na tela de detalhe do objetivo)
+  o.tasks.push(tempTask);
   renderObjectives();
-  
+
   const { data, error } = await window.db.from('tasks').insert([{
     objective_id: objId,
     description: '',
@@ -121,15 +114,14 @@ async function addTask(compId, objId){
     status: 'A Iniciar',
     sort_order: maxOrder + 1
   }]).select().single();
-  
+
   if (error) {
     o.tasks = o.tasks.filter(t => t.id !== tempId);
-    if (state._openTasks) state._openTasks = state._openTasks.filter(x => String(x) !== String(tempId));
     renderObjectives();
     showToast("Erro ao criar tarefa: " + error.message, "error");
     return;
   }
-  
+
   const idx = o.tasks.findIndex(t => t.id === tempId);
   if (idx >= 0) {
     o.tasks[idx] = {
@@ -141,12 +133,10 @@ async function addTask(compId, objId){
     };
   }
 
-  // ✔ CORRIGIDO: migra o ID aberto de temp para o real
-  if (state._openTasks) {
-    state._openTasks = state._openTasks.map(x => String(x) === String(tempId) ? String(data.id) : x);
-  }
-
   renderObjectives();
+
+  // Abre o modal para o usuário já preencher a nova tarefa
+  openTaskModal(compId, objId, data.id);
 }
 
 async function removeTask(compId, objId, taskId){
@@ -157,8 +147,6 @@ async function removeTask(compId, objId, taskId){
   const backup = o.tasks.slice();
   o.tasks = o.tasks.filter(t => t.id !== taskId);
 
-  // ✔ CORRIGIDO: renderObjectives() em vez de renderObjectivesListOnly()
-  // — esta é a correção do bug "tarefa continua visível após excluir"
   renderObjectives();
 
   const { error } = await window.db.from('tasks').delete().eq('id', taskId);
@@ -174,23 +162,23 @@ async function removeTask(compId, objId, taskId){
 async function addAttachments(compId, taskId, input){
   const found = findTask(taskId);
   if(!found) return;
-  
+
   const files = Array.from(input.files || []);
   if (files.length === 0) return;
-  
+
   showToast("Fazendo upload...", "info");
 
   for (const file of files) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${taskId}/${uid()}.${fileExt}`;
-    
+
     const { error: uploadError } = await window.db.storage
       .from('task-attachments')
       .upload(fileName, file);
 
-    if (uploadError) { 
-      showToast("Erro no upload: " + uploadError.message, "error"); 
-      continue; 
+    if (uploadError) {
+      showToast("Erro no upload: " + uploadError.message, "error");
+      continue;
     }
 
     const { data, error } = await window.db.from('task_attachments').insert([{
@@ -208,30 +196,30 @@ async function addAttachments(compId, taskId, input){
     }
   }
   input.value = '';
-  renderObjectives(); // ✔ CORRIGIDO
+  refreshAttachmentsUI(taskId);
   showToast("Anexo(s) enviado(s)!", "success");
 }
 
 async function removeAttachment(compId, taskId, attachId){
   const found = findTask(taskId);
   if(!found) return;
-  
+
   const attach = found.task.attachments.find(a => a.id === attachId);
-  
+
   if(attach?.path) {
     await window.db.storage.from('task-attachments').remove([attach.path]);
   }
   const { error } = await window.db.from('task_attachments').delete().eq('id', attachId);
   if (error) { showToast("Erro ao deletar anexo.", "error"); return; }
-  
+
   found.task.attachments = found.task.attachments.filter(a => a.id !== attachId);
-  renderObjectives(); // ✔ CORRIGIDO
+  refreshAttachmentsUI(taskId);
   showToast("Anexo removido.", "success");
 }
 
 async function openAttachment(filePath) {
   if (!filePath) return;
-  
+
   const { data, error } = await window.db.storage
     .from('task-attachments')
     .createSignedUrl(filePath, 60);
