@@ -1,36 +1,57 @@
+/* assets/js/views/my-tasks.js */
+
 function renderMyTasks(){
   const el = $('view-minhas');
   const u = state.currentUser;
   const comps = accessibleCompanies();
-  const mine = [];
-  comps.forEach(c => (state.objectives[c.id]||[]).forEach(o => o.tasks.forEach(t => {
-    if(t.responsibleId === u.id) mine.push({ ...t, _obj: o.title, _comp: c.name, _compId: c.id });
-  })));
+  
+  // Agrupa as tarefas por Empresa e Objetivo para ficar organizado
+  let htmlContent = '';
 
-  const html = mine.length
-    ? mine.map(t => `
-      <div class="task-card" style="margin-bottom:12px">
-        <div style="font-size:11px;color:var(--gray-500);margin-bottom:6px">${escapeHtml(t._comp)} › ${escapeHtml(t._obj)}</div>
-        <div style="font-weight:600;color:var(--gray-800);margin-bottom:10px">${escapeHtml(t.description||'(sem descrição)')}</div>
-        <div class="task-grid">
-          <div class="task-field"><label>Início</label><div>${fmtDate(t.startDate)}</div></div>
-          <div class="task-field"><label>Conclusão</label><div>${fmtDate(t.endDate)}</div></div>
-          <div class="task-field"><label>Status</label>
-            <div>${effectiveStatus(t)} ${effectiveStatus(t)==='Atrasada' && t.status!=='Atrasada' ? '<span class="late-badge">⚠ auto</span>' : ''}</div>
-          </div>
-          <div class="task-field"><label>Custo</label><div>${fmtBRL(t.cost)}</div></div>
-          <div class="task-field"><label>Resultado</label><div>${fmtBRL(t.result)}</div></div>
-          <div class="task-field full"><label>Observações</label>
-            <textarea placeholder="Suas anotações..." ${can('editTask')?'':'disabled'}
-                      onchange="updateTask('${t._compId}','${t.id}','notes',this.value)">${escapeHtml(t.notes||'')}</textarea>
-          </div>
-        </div>
-        <div style="margin-top:10px">
-          <button class="btn btn-sm btn-ghost" onclick="openHistory('${t.id}')">◔ Ver histórico</button>
-        </div>
-      </div>`).join('')
-    : `<div class="panel"><div class="panel-body" style="text-align:center;padding:40px;color:var(--gray-500)">
-        Nenhuma tarefa atribuída a você.</div></div>`;
+  comps.forEach(comp => {
+    const objs = state.objectives[comp.id] || [];
+    let compHtml = '';
 
-  el.innerHTML = `<div class="page-header"><div><h1>Minhas tarefas</h1><p>Tarefas atribuídas a você.</p></div></div>${html}`;
+    objs.forEach(o => {
+      const myTasks = o.tasks.filter(t => String(t.responsibleId) === String(u.id));
+      
+      if (myTasks.length > 0) {
+        compHtml += `
+          <div style="margin-top: 20px; margin-bottom: 10px;">
+            <h3 style="font-size: 14px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; padding-bottom: 6px; border-bottom: 2px solid var(--gray-200);">
+              ${escapeHtml(o.title)}
+            </h3>
+          </div>
+          ${myTasks.map(t => taskHTML(t, comp.id, o.id)).join('')}
+        `;
+      }
+    });
+
+    if (compHtml) {
+      htmlContent += `
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 18px; font-weight: 700; color: var(--gray-800); margin-bottom: 8px;">${escapeHtml(comp.name)}</h2>
+          ${compHtml}
+        </div>
+      `;
+    }
+  });
+
+  if (!htmlContent) {
+    htmlContent = `<div class="panel"><div class="panel-body" style="text-align:center;padding:40px;color:var(--gray-500)">
+      Nenhuma tarefa atribuída a você no momento.
+    </div></div>`;
+  }
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>Minhas tarefas</h1>
+        <p>Clique em uma tarefa para visualizar os detalhes ou editar.</p>
+      </div>
+    </div>
+    <div>
+      ${htmlContent}
+    </div>
+  `;
 }
