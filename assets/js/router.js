@@ -24,11 +24,13 @@ function toggleSidebar() {
   if(overlay) overlay.classList.toggle('hidden');
 }
 
-/* --- NOVA LÓGICA: Sidebar Retrátil --- */
+/* Lógica Robusta para Recolher o Painel */
 function toggleSidebarCollapse() {
   const sidebar = document.getElementById('sidebar');
   const mainWrapper = document.getElementById('mainWrapper');
   
+  if (!sidebar || !mainWrapper) return;
+
   const isCollapsed = sidebar.classList.toggle('collapsed');
   mainWrapper.classList.toggle('collapsed');
   
@@ -40,6 +42,9 @@ function applySidebarState() {
   if (isCollapsed) {
     document.getElementById('sidebar')?.classList.add('collapsed');
     document.getElementById('mainWrapper')?.classList.add('collapsed');
+  } else {
+    document.getElementById('sidebar')?.classList.remove('collapsed');
+    document.getElementById('mainWrapper')?.classList.remove('collapsed');
   }
 }
 
@@ -53,7 +58,6 @@ function renderSidebar(){
     }
     if(!item.show()) return;
     
-    // Adiciona a classe nav-text e um title para quando estiver recolhido
     html += `<div class="nav-item" data-view="${item.id}" title="${item.label}">
       <span class="ico">${item.icon}</span>
       <span class="nav-text">${item.label}</span>
@@ -67,7 +71,6 @@ function renderSidebar(){
     });
   });
   
-  // Aplica o estado recolhido ao iniciar
   applySidebarState();
 }
 
