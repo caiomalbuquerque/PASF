@@ -1,7 +1,7 @@
 function openModal(html, opts = {}){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  overlay.innerHTML = `<div class="modal ${opts.className || ''}">${html}</div>`;
   document.body.appendChild(overlay);
   if(opts.closeOnOverlay !== false){
     overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
