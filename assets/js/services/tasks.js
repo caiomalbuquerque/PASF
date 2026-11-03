@@ -21,8 +21,7 @@ function findTask(taskId){
 }
 
 function refreshObjectiveDOM(objId, compId) {
-  const o = (state.objectives[compId] || []).find(x => x.id === objId);
-  if (!o) return;
+  // Mantido por compatibilidade, mas a lógica atual usa renderObjectives() direto na view
 }
 
 async function updateTask(compId, taskId, field, value){
@@ -35,7 +34,13 @@ async function updateTask(compId, taskId, field, value){
   if(String(oldValue||'') === String(value||'')) return;
 
   found.task[field] = value;
-  updateObjectiveMetrics(found.objective.id, compId);
+  
+  // Atualiza os cartões do objetivo (seja na lista ou no detalhe)
+  if (state.currentObjective && String(state.currentObjective) === String(found.objective.id)) {
+    renderObjectives(); 
+  } else {
+    updateObjectiveMetrics(found.objective.id, compId);
+  }
 
   const dbField = field === 'responsibleId' ? 'responsible_id' :
                   field === 'startDate' ? 'start_date' :
@@ -45,11 +50,13 @@ async function updateTask(compId, taskId, field, value){
 
   if (error) {
     found.task[field] = oldValue;
-    updateObjectiveMetrics(found.objective.id, compId);
+    if (state.currentObjective && String(state.currentObjective) === String(found.objective.id)) renderObjectives();
+    else updateObjectiveMetrics(found.objective.id, compId);
     showToast("Erro ao salvar tarefa: " + error.message, "error");
     return;
   }
 
+  // Correção do Histórico: Adicionado .select().single() para devolver o registro criado
   if (field !== 'created_at' && field !== 'updated_at') {
     window.db.from('audit_logs').insert([{
       task_id: taskId,
@@ -57,10 +64,18 @@ async function updateTask(compId, taskId, field, value){
       field_changed: FIELD_LABELS[field] || field,
       old_value: String(oldValue || ''),
       new_value: String(value || '')
-    }]).then(({data, error}) => {
-      if (!error && data) {
+    }]).select().single().then(({data, error}) => {
+      if (error) {
+        console.error('❌ Erro ao salvar log:', error);
+      } else if (data) {
         state.auditLog.push({
-          id: data[0].id, taskId, userId: state.currentUser.id, field, oldValue, newValue: value, timestamp: data[0].created_at
+          id: data.id, 
+          taskId, 
+          userId: state.currentUser.id, 
+          field: data.field_changed, 
+          oldValue: data.old_value, 
+          newValue: data.new_value, 
+          timestamp: data.created_at
         });
       }
     });
@@ -134,8 +149,6 @@ async function addTask(compId, objId){
   }
 
   renderObjectives();
-
-  // Abre o modal para o usuário já preencher a nova tarefa
   openTaskModal(compId, objId, data.id);
 }
 
