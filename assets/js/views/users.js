@@ -1,4 +1,5 @@
-/* Acesso restrito — apenas admin e global_collaborator */
+/* assets/js/views/users.js */
+
 function renderUsers(){
   const el = $('view-responsaveis');
   if(!can('seeUsers')){
@@ -8,28 +9,97 @@ function renderUsers(){
   }
 
   const scopeAll = can('scope') === 'all';
-  let list = scopeAll ? state.users : state.users.filter(u => u.companyId === state.currentCompany);
-  list = list.filter(u => u.role !== 'admin');
+  const comps = scopeAll ? state.companies : [companyById(state.currentCompany)].filter(Boolean);
+  
+  // Inicializa filtros se não existirem
+  if (!state._userFilters) {
+    state._userFilters = { name: '', role: '', company: '', manager: '' };
+  }
+  const f = state._userFilters;
 
   el.innerHTML = `
     <div class="page-header">
       <div><h1>Responsáveis</h1>
-        <p>Pessoas que podem receber tarefas${scopeAll?' (todas as empresas)':` (${companyById(state.currentCompany)?.name||''})`}.</p></div>
+        <p>Gerencie os acessos ao sistema.${scopeAll ? ' (Visão Global)' : ` (${companyById(state.currentCompany)?.name||''})`}</p></div>
       ${can('manageUsers') ? `<button class="btn btn-primary" onclick="openNewUserModal()">+ Novo responsável</button>` : ''}
     </div>
+
+    <!-- CONTAINER DE FILTROS -->
+    <div class="filter-bar" style="background: #fff; padding: 16px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); margin-bottom: 20px;">
+      <input type="text" id="uFilterName" placeholder="Buscar nome..." value="${escapeHtml(f.name)}" style="flex: 1; min-width: 150px;">
+      
+      <select id="uFilterRole" style="min-width: 150px;">
+        <option value="">Todos os perfis</option>
+        <option value="admin" ${f.role==='admin'?'selected':''}>Administrador</option>
+        <option value="global_collaborator" ${f.role==='global_collaborator'?'selected':''}>Global</option>
+        <option value="unique_collaborator" ${f.role==='unique_collaborator'?'selected':''}>Gestor</option>
+        <option value="unique_leader" ${f.role==='unique_leader'?'selected':''}>Líder</option>
+        <option value="unique_user" ${f.role==='unique_user'?'selected':''}>Usuário Padrão</option>
+      </select>
+
+      <select id="uFilterCompany" style="min-width: 150px;">
+        <option value="">Todas as empresas</option>
+        ${comps.map(c => `<option value="${c.id}" ${f.company==c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+      </select>
+
+      <select id="uFilterManager" style="min-width: 150px;">
+        <option value="">Todos os gestores</option>
+        ${state.users.filter(u => u.role === 'unique_collaborator').map(m => `<option value="${m.id}" ${f.manager==m.id?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div id="users-table-container"></div>
+  `;
+
+  // Listeners dos filtros
+  $('uFilterName').addEventListener('input', e => { f.name = e.target.value; renderUsersTable(); });
+  $('uFilterRole').addEventListener('change', e => { f.role = e.target.value; renderUsersTable(); });
+  $('uFilterCompany').addEventListener('change', e => { f.company = e.target.value; renderUsersTable(); });
+  $('uFilterManager').addEventListener('change', e => { f.manager = e.target.value; renderUsersTable(); });
+
+  renderUsersTable();
+}
+
+function renderUsersTable() {
+  const container = $('users-table-container');
+  if(!container) return;
+
+  const scopeAll = can('scope') === 'all';
+  const f = state._userFilters;
+  
+  // Base da lista: Admin só não vê a si mesmo na lista, mas vê os outros admins? Vamos ocultar todos os admins para não haver exclusão acidental.
+  let list = scopeAll ? state.users : state.users.filter(u => u.companyId === state.currentCompany || u.role === 'global_collaborator');
+  list = list.filter(u => u.role !== 'admin');
+
+  // Aplica filtros
+  if (f.name) list = list.filter(u => u.name.toLowerCase().includes(f.name.toLowerCase()) || u.email.toLowerCase().includes(f.name.toLowerCase()));
+  if (f.role) list = list.filter(u => u.role === f.role);
+  if (f.company) list = list.filter(u => String(u.companyId) === String(f.company));
+  if (f.manager) list = list.filter(u => String(u.gestorId) === String(f.manager));
+
+  if (list.length === 0) {
+    container.innerHTML = `<div class="panel"><div class="panel-body" style="text-align:center;padding:40px;color:var(--gray-500)">
+      Nenhum usuário encontrado com os filtros atuais.
+    </div></div>`;
+    return;
+  }
+
+  container.innerHTML = `
     <div class="panel"><table class="admin-table">
       <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Empresa</th><th>Gestor</th><th>Tarefas</th><th>Ações</th></tr></thead>
       <tbody>
         ${list.map(u => {
-          const comp = u.companyId ? companyById(u.companyId)?.name : 'Todas';
+          const comp = u.companyId ? companyById(u.companyId)?.name : '<span style="color:var(--primary);font-weight:600">Global</span>';
           const gestor = u.gestorId ? userById(u.gestorId)?.name : '—';
           const count = allTasksFlat().filter(t => t.responsibleId === u.id).length;
+          const color = ROLE_COLORS[u.role] || '#999';
+          
           return `<tr>
             <td><div style="display:flex;align-items:center;gap:10px">
-              <div class="avatar" style="width:28px;height:28px;font-size:10px;background:${ROLE_COLORS[u.role] || '#999'}">${initials(u.name)}</div>
+              <div class="avatar" style="width:28px;height:28px;font-size:10px;background:${color}">${initials(u.name)}</div>
               <strong>${escapeHtml(u.name)}</strong></div></td>
             <td>${u.email}</td>
-            <td><span class="tag" style="background:${ROLE_COLORS[u.role] || '#999'}22;color:${ROLE_COLORS[u.role] || '#999'}">${ROLE_LABELS[u.role] || u.role}</span></td>
+            <td><span class="tag" style="background:${color}22;color:${color}">${ROLE_LABELS[u.role] || u.role}</span></td>
             <td>${comp}</td>
             <td>${gestor}</td>
             <td>${count}</td>
@@ -42,7 +112,8 @@ function renderUsers(){
           </tr>`;
         }).join('')}
       </tbody>
-    </table></div>`;
+    </table></div>
+  `;
 }
 
 // --- RESETAR SENHA ---
@@ -58,17 +129,13 @@ async function resetUserPassword(email) {
 }
 
 // --- LÓGICA DE GESTOR IMEDIATO ---
-// Popula o select de gestores baseado na empresa selecionada
 function updateManagerOptions(prefix, companyId, selectedManagerId = '', userId = null) {
   const sel = $(`${prefix}Manager`);
   if(!sel) return;
   
   sel.innerHTML = '<option value="">Nenhum (Topo da Hierarquia)</option>';
-  
-  // Se não tem empresa (ex: Global ou Admin), não há gestor da empresa.
   if (!companyId) return; 
 
-  // Filtra apenas Gestores da mesma empresa e que não seja o próprio usuário sendo editado
   const managers = state.users.filter(u =>
     u.role === 'unique_collaborator' &&
     String(u.companyId) === String(companyId) &&
@@ -88,10 +155,10 @@ function toggleCompanyField(role, prefix = 'newUser') {
   
   if(isGlobal){
     lbl.style.opacity = '0.5'; sel.style.opacity = '0.5'; sel.disabled = true; sel.value = '';
-    updateManagerOptions(prefix, null); // Limpa gestores se não tem empresa
+    updateManagerOptions(prefix, null);
   } else {
     lbl.style.opacity = '1'; sel.style.opacity = '1'; sel.disabled = false;
-    updateManagerOptions(prefix, sel.value); // Carrega gestores da empresa atual
+    updateManagerOptions(prefix, sel.value);
   }
 }
 
@@ -136,7 +203,6 @@ function openNewUserModal(){
       <button class="btn btn-primary" id="btnCreateUser" onclick="submitNewUser(this)">Criar</button>
     </div>`);
     
-  // Inicializa os gestores com base na primeira empresa da lista
   setTimeout(() => {
     const firstCompany = $('newUserCompany').value;
     updateManagerOptions('newUser', firstCompany);
@@ -168,10 +234,6 @@ async function submitNewUser(btn){
   if (error) { 
     errDiv.textContent = error.message; 
     errDiv.classList.remove('hidden'); btn.textContent = 'Criar'; btn.disabled = false; return; 
-  }
-
-  if (data.user && !data.session) {
-    console.warn("O usuário foi criado, mas o Supabase exigiu confirmação de e-mail.");
   }
 
   btn.closest('.modal-overlay').remove();
@@ -220,7 +282,6 @@ function openEditUserModal(userId) {
       <button class="btn btn-primary" id="btnEditUser" onclick="submitEditUser('${u.id}', this)">Salvar Alterações</button>
     </div>`);
 
-  // Executa a lógica visual e carrega os gestores
   toggleCompanyField(u.role, 'editUser');
   updateManagerOptions('editUser', u.companyId, u.gestorId, u.id);
 }
@@ -253,5 +314,11 @@ async function submitEditUser(userId, btn) {
 async function refreshUsersList(){
   const { data: profiles } = await window.db.from('profiles').select('*');
   state.users = (profiles || []).map(p => ({ ...p, companyId: p.company_id, gestorId: p.manager_id }));
-  renderUsers();
+  
+  // Atualiza a tabela
+  if ($('users-table-container')) {
+    renderUsersTable();
+  } else {
+    renderUsers();
+  }
 }
