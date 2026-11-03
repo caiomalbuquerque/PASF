@@ -21,14 +21,14 @@ function findTask(taskId){
 }
 
 function refreshObjectiveDOM(objId, compId) {
-  // Mantido por compatibilidade, mas a lógica atual usa renderObjectives() direto na view
+  // Mantido por compatibilidade
 }
 
 async function updateTask(compId, taskId, field, value){
   const found = findTask(taskId);
   if(!found) return;
 
-    // NOVA TRAVA DE SEGURANÇA
+  // Trava de segurança: Usuário Padrão só edita se for o responsável
   if (state.currentUser.role === 'unique_user' && String(found.task.responsibleId) !== String(state.currentUser.id)) {
     showToast("Você não tem permissão para editar esta tarefa.", "error");
     return;
@@ -41,7 +41,7 @@ async function updateTask(compId, taskId, field, value){
 
   found.task[field] = value;
   
-  // Atualiza os cartões do objetivo (seja na lista ou no detalhe)
+  // Atualiza a interface imediatamente
   if (state.currentObjective && String(state.currentObjective) === String(found.objective.id)) {
     renderObjectives(); 
   } else {
@@ -62,7 +62,7 @@ async function updateTask(compId, taskId, field, value){
     return;
   }
 
-  // Correção do Histórico: Adicionado .select().single() para devolver o registro criado
+  // Salva no histórico
   if (field !== 'created_at' && field !== 'updated_at') {
     window.db.from('audit_logs').insert([{
       task_id: taskId,
@@ -71,9 +71,7 @@ async function updateTask(compId, taskId, field, value){
       old_value: String(oldValue || ''),
       new_value: String(value || '')
     }]).select().single().then(({data, error}) => {
-      if (error) {
-        console.error('❌ Erro ao salvar log:', error);
-      } else if (data) {
+      if (!error && data) {
         state.auditLog.push({
           id: data.id, 
           taskId, 
@@ -87,30 +85,59 @@ async function updateTask(compId, taskId, field, value){
     });
   }
 
-  if(state.currentUser.gestorId && state.currentUser.gestorId !== state.currentUser.id){
-    window.db.from('notifications').insert([{
-      user_id: state.currentUser.gestorId,
-      message: `${state.currentUser.name} atualizou "${FIELD_LABELS[field]||field}" da tarefa "${found.task.description || '(sem descrição)'}"`,
-      task_id: taskId,
-      target_field: field
-    }]);
+  // --- LÓGICA DE NOTIFICAÇÕES REFEITA ---
+  const usersToNotify = new Set();
+
+  // 1. Notificar o Gestor do usuário que está fazendo a alteração
+  if (state.currentUser.gestorId) {
+    usersToNotify.add(state.currentUser.gestorId);
+  } 
+  // 1.1 Fallback: Se não tiver gestor vinculado (ou for nulo), notifica o gestor da empresa
+  else if (state.currentUser.role !== 'unique_collaborator' && state.currentUser.role !== 'admin' && state.currentUser.role !== 'global_collaborator') {
+    const compManager = state.users.find(u => u.role === 'unique_collaborator' && String(u.companyId) === String(state.currentUser.companyId));
+    if (compManager) usersToNotify.add(compManager.id);
   }
 
-  if(field === 'responsibleId' && value !== state.currentUser.id){
+  // 2. Notificar o Gestor do responsável atual da tarefa (se for diferente de quem está editando)
+  const currentResp = userById(found.task.responsibleId);
+  if (currentResp && currentResp.gestorId) {
+    usersToNotify.add(currentResp.gestorId);
+  }
+
+  // 3. Se a alteração for a troca de responsável, notifica o novo responsável e o gestor dele
+  if (field === 'responsibleId' && value) {
+    usersToNotify.add(value);
+    const newResp = userById(value);
+    if (newResp && newResp.gestorId) {
+      usersToNotify.add(newResp.gestorId);
+    }
+  }
+
+  // Nunca notificar o próprio usuário que fez a ação
+  usersToNotify.delete(state.currentUser.id);
+
+  // Disparar as notificações para todos os envolvidos
+  usersToNotify.forEach(targetId => {
+    let msg = `${state.currentUser.name} atualizou "${FIELD_LABELS[field]||field}" da tarefa "${found.task.description || '(sem descrição)'}"`;
+    
+    // Personaliza a mensagem caso seja uma atribuição de tarefa
+    if (field === 'responsibleId' && targetId === value) {
+        msg = `Você foi atribuído(a) à tarefa "${found.task.description || '(sem descrição)'}"`;
+    }
+
     window.db.from('notifications').insert([{
-      user_id: value,
-      message: `Você foi atribuído(a) à tarefa "${found.task.description || '(sem descrição)'}"`,
+      user_id: targetId,
+      message: msg,
       task_id: taskId,
       target_field: field
     }]);
-  }
+  });
 }
 
 async function addTask(compId, objId){
   const o = (state.objectives[compId]||[]).find(x => x.id === objId);
   if(!o) return;
 
-  const firstUser = state.users.find(u => Number(u.companyId) === Number(compId));
   const maxOrder = o.tasks.length > 0 ? Math.max(...o.tasks.map(t => t.sort_order || 0)) : 0;
 
   const tempId = 'temp_' + uid();
@@ -118,7 +145,7 @@ async function addTask(compId, objId){
     id: tempId,
     objective_id: objId,
     description: '',
-    responsibleId: firstUser?.id || null,
+    responsibleId: null,
     status: 'A Iniciar',
     sort_order: maxOrder + 1,
     attachments: [],
@@ -131,7 +158,7 @@ async function addTask(compId, objId){
   const { data, error } = await window.db.from('tasks').insert([{
     objective_id: objId,
     description: '',
-    responsible_id: firstUser?.id || null,
+    responsible_id: null,
     status: 'A Iniciar',
     sort_order: maxOrder + 1
   }]).select().single();
@@ -155,7 +182,6 @@ async function addTask(compId, objId){
   }
 
   renderObjectives();
-  openTaskModal(compId, objId, data.id);
 }
 
 async function removeTask(compId, objId, taskId){
