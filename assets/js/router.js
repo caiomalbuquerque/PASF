@@ -24,6 +24,25 @@ function toggleSidebar() {
   if(overlay) overlay.classList.toggle('hidden');
 }
 
+/* --- NOVA LÓGICA: Sidebar Retrátil --- */
+function toggleSidebarCollapse() {
+  const sidebar = document.getElementById('sidebar');
+  const mainWrapper = document.getElementById('mainWrapper');
+  
+  const isCollapsed = sidebar.classList.toggle('collapsed');
+  mainWrapper.classList.toggle('collapsed');
+  
+  localStorage.setItem('pasf_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+}
+
+function applySidebarState() {
+  const isCollapsed = localStorage.getItem('pasf_sidebar_collapsed') === 'true';
+  if (isCollapsed) {
+    document.getElementById('sidebar')?.classList.add('collapsed');
+    document.getElementById('mainWrapper')?.classList.add('collapsed');
+  }
+}
+
 function renderSidebar(){
   let html = '';
   NAV.forEach(item => {
@@ -33,8 +52,11 @@ function renderSidebar(){
       return;
     }
     if(!item.show()) return;
-    html += `<div class="nav-item" data-view="${item.id}">
-      <span class="ico">${item.icon}</span>${item.label}
+    
+    // Adiciona a classe nav-text e um title para quando estiver recolhido
+    html += `<div class="nav-item" data-view="${item.id}" title="${item.label}">
+      <span class="ico">${item.icon}</span>
+      <span class="nav-text">${item.label}</span>
     </div>`;
   });
   $('sidebarNav').innerHTML = html;
@@ -44,6 +66,9 @@ function renderSidebar(){
       if(window.innerWidth <= 900) toggleSidebar();
     });
   });
+  
+  // Aplica o estado recolhido ao iniciar
+  applySidebarState();
 }
 
 function renderTopbar(){
@@ -67,7 +92,7 @@ function renderTopbar(){
     `;
     $('topCompanySelect').onchange = (e) => {
       state.currentCompany = Number(e.target.value);
-      state.currentObjective = null; // Reseta o objetivo ao trocar de empresa
+      state.currentObjective = null;
       renderTopbar();
       showView(document.querySelector('.nav-item.active')?.dataset.view || 'objetivos');
     };
@@ -84,7 +109,6 @@ function showView(viewId){
   if(!target) return;
   target.classList.remove('hidden');
 
-  // SE CLICAR NO MENU LATERAL, VOLTA PARA A LISTA
   if (viewId === 'objetivos') {
     state.currentObjective = null; 
   }
