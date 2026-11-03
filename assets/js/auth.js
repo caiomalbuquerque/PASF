@@ -80,8 +80,16 @@ async function handleSignUp(e){
     return;
   }
 
-  alert('Conta criada com sucesso! Verifique seu e-mail para confirmar o cadastro ou faça login.');
-  showAuthView('login');
+  // Se a confirmação de e-mail estiver desligada, o Supabase já retorna o data.session preenchido.
+  // Fazemos o login automático.
+  if (data.session) {
+    window.location.href = 'app.html';
+  } else {
+    // Fallback caso o Supabase ainda exija a confirmação por algum motivo
+    alert('Conta criada com sucesso! Você já pode fazer login.');
+    showAuthView('login');
+  }
+  
   btn.textContent = 'Cadastrar'; btn.disabled = false;
 }
 
