@@ -20,7 +20,6 @@ function taskHTML(t, compId, objId){
   const nAtt = (t.attachments || []).length;
   const descText = t.description || '(Nova tarefa sem descrição)';
 
-  // Cores do Status para o cartão
   let statusBg = 'var(--status-todo-bg)', statusColor = 'var(--status-todo-text)';
   if (eff === 'Concluída') { statusBg = 'var(--status-done-bg)'; statusColor = 'var(--status-done-text)'; }
   else if (eff === 'Em Andamento') { statusBg = 'var(--status-progress-bg)'; statusColor = 'var(--status-progress-text)'; }
@@ -34,49 +33,41 @@ function taskHTML(t, compId, objId){
        onclick="openTaskModal('${compId}','${objId}','${t.id}')"
        style="padding: 12px 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
     
-    <!-- Descrição -->
     <div style="flex: 2; min-width: 250px; display: flex; align-items: center; gap: 8px;">
       <span class="drag-handle" onclick="event.stopPropagation()" title="Arrastar para reordenar">⋮⋮</span>
       <span style="font-size: 14px; font-weight: 600; color: var(--gray-900); word-break: break-word;">${escapeHtml(descText)}</span>
     </div>
 
-    <!-- Responsável -->
     <div class="task-stat" style="flex: 1; min-width: 100px;">
       <span class="l">Responsável</span>
       <span class="v">${resp ? escapeHtml(resp.name) : '—'}</span>
     </div>
     
-    <!-- Início -->
     <div class="task-stat" style="flex: 1; min-width: 80px;">
       <span class="l">Início</span>
       <span class="v">${fmtDate(t.startDate)}</span>
     </div>
 
-    <!-- Conclusão -->
     <div class="task-stat" style="flex: 1; min-width: 80px;">
       <span class="l">Conclusão</span>
       <span class="v" style="${late?'color:var(--danger)':''}">${fmtDate(t.endDate)}</span>
     </div>
 
-    <!-- Status -->
     <div class="task-stat" style="flex: 1; min-width: 100px;">
       <span class="l">Status</span>
       <span class="v" style="background:${statusBg}; color:${statusColor}; padding: 2px 8px; border-radius: 4px; display: inline-block; width: fit-content; font-size: 12px;">${eff}</span>
     </div>
 
-    <!-- Custo -->
     <div class="task-stat" style="flex: 1; min-width: 80px;">
       <span class="l">Custo</span>
       <span class="v">${fmtBRL(cost)}</span>
     </div>
 
-    <!-- Resultado -->
     <div class="task-stat" style="flex: 1; min-width: 80px;">
       <span class="l">Resultado</span>
       <span class="v" style="color:var(--accent-dark)">${fmtBRL(result)}</span>
     </div>
 
-    <!-- Anexos -->
     <div class="task-stat" style="flex: 1; min-width: 60px;">
       <span class="l">Anexos</span>
       <span class="v">${nAtt ? '📎 ' + nAtt : '—'}</span>
@@ -174,7 +165,7 @@ function openTaskModal(compId, objId, taskId, focusField){
     </div>
 
     <div class="modal-footer" style="display: flex; align-items: center; width: 100%;">
-      ${del ? `<button class="btn btn-danger" style="margin-right: auto;" onclick="if(confirm('Remover esta tarefa?')) { this.closest('.modal-overlay').remove(); removeTask('${found.compId}','${found.objective.id}','${t.id}'); }">Excluir</button>` : ''}
+      ${del ? `<button class="btn btn-danger" style="margin-right: auto;" onclick="removeTask('${found.compId}','${found.objective.id}','${t.id}'); this.closest('.modal-overlay').remove();">Excluir</button>` : ''}
       
       <button class="btn btn-ghost" onclick="openHistory('${t.id}')">◔ Histórico</button>
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">${edit ? 'Cancelar' : 'Fechar'}</button>
@@ -248,7 +239,6 @@ function openHistory(taskId){
       }).join('')
     : '<p style="color:var(--gray-500);text-align:center;padding:20px">Nenhuma alteração registrada.</p>';
 
-  // Adicionado um z-index extra para garantir que fique acima do modal de edição de tarefa
   const overlay = openModal(`
     <div class="modal-header">
       <h3>Histórico — ${escapeHtml(title)}</h3>
@@ -259,5 +249,5 @@ function openHistory(taskId){
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Fechar</button>
     </div>`);
     
-  overlay.style.zIndex = '105'; // Fica acima da sobreposição do modal de edição
+  overlay.style.zIndex = '105'; 
 }
