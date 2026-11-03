@@ -190,9 +190,9 @@ function renderObjectiveDetail(objId, el) {
   }
   const f = state._taskFilters;
 
+  // AJUSTE DO STICKY (top: 0 e margin-top: -24px para cobrir o padding do content-inner)
   el.innerHTML = `
-    <!-- CONTAINER STICKY (Cabeçalho e Filtros travados) -->
-    <div style="position: sticky; top: -24px; z-index: 20; background: var(--gray-100); padding-top: 24px; padding-bottom: 12px; margin-top: -24px;">
+    <div style="position: sticky; top: 0; z-index: 20; background: var(--gray-100); padding-top: 24px; margin-top: -24px; padding-bottom: 12px; border-bottom: 1px solid var(--gray-200);">
       
       <!-- Cabeçalho do Objetivo -->
       <div class="objective-card" style="box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; cursor: pointer; transition: var(--transition); border-radius: var(--radius-lg);" onclick="openObjectiveModal('${compId}', '${o.id}')" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
@@ -278,7 +278,7 @@ function renderObjectiveDetail(objId, el) {
     </div>
 
     <!-- LISTA DE TAREFAS -->
-    <div id="task-list-container" style="margin-top: 8px;"></div>
+    <div id="task-list-container" style="margin-top: 12px;"></div>
   `;
 
   const refreshList = () => applyTaskFilters(compId, o.id);
@@ -298,7 +298,6 @@ function getSortIcon(field) {
   return '↑';
 }
 
-// Correção: Recebendo compId e objId para atualizar corretamente
 function toggleSort(field, compId, objId) {
   const f = state._taskFilters;
   
