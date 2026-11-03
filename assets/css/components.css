@@ -64,47 +64,29 @@
 .tasks-header h4{font-size:14px;font-weight:700;color:var(--gray-700);display:flex;align-items:center;gap:6px}
 .tasks-header .count{background:var(--gray-200);color:var(--gray-600);font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px}
 
-/* Task card */
-.task-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:10px;
-  transition:var(--transition);position:relative;overflow:hidden}
-.task-card:hover{border-color:var(--gray-300);box-shadow:var(--shadow-sm)}
+/* Task card (RESUMO) */
+.task-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);
+  padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:var(--transition);position:relative;}
+.task-card:hover{border-color:var(--primary);box-shadow:var(--shadow-md);}
+.task-card.dragging{opacity:.4;border: 2px dashed var(--primary);background: var(--gray-50);}
 
-/* Cabeçalho da tarefa */
-.task-card .task-header{display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;user-select:none;background:#fff}
-.task-card.open .task-header{border-bottom:1px solid var(--gray-100)}
-.task-card .task-header .chevron{font-size:10px;color:var(--gray-400);transition:transform .2s ease;width:16px;text-align:center}
-.task-card.open .task-header .chevron{transform:rotate(90deg);color:var(--primary)}
-.task-card .task-summary{flex:1;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--gray-800)}
-.task-card .task-summary .desc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
+.task-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.task-card-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;flex:1}
+.task-card-title .desc{font-size:15px;font-weight:700;color:var(--gray-900);word-break:break-word}
 
 .task-actions{display:flex;gap:4px}
-.task-actions button{width:26px;height:26px;border-radius:6px;color:var(--gray-400);display:flex;align-items:center;
-  justify-content:center;font-size:13px;transition:var(--transition)}
+.task-actions button{width:28px;height:28px;border-radius:6px;color:var(--gray-400);display:flex;align-items:center;
+  justify-content:center;font-size:14px;transition:var(--transition)}
 .task-actions button:hover{background:var(--gray-100);color:var(--gray-700)}
 .task-actions button.danger:hover{background:#fee2e2;color:var(--danger)}
 
-/* Corpo da tarefa */
-.task-body{display:none;padding:14px;background:#fff}
-.task-card.open .task-body{display:block}
+.task-stats{display:flex;flex-wrap:wrap;gap:10px 24px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--gray-200)}
+.task-stat{display:flex;flex-direction:column;gap:2px;min-width:80px}
+.task-stat .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)}
+.task-stat .v{font-size:13px;font-weight:700;color:var(--gray-800)}
 
-.task-card .task-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-.task-card .task-desc{flex:1;padding:8px 10px;border:1px solid var(--gray-200);border-radius:6px;background:var(--gray-50);
-  font-weight:600;color:var(--gray-800);font-size:13px;transition:var(--transition);outline:none}
-.task-card .task-desc:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(15,76,129,.1)}
-.task-card .task-desc:disabled{background:transparent;border-color:transparent}
-
-.task-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.task-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
-  color:var(--gray-600);margin-bottom:4px}
-.task-field select,.task-field input,.task-field textarea{width:100%;padding:7px 10px;border:1px solid var(--gray-200);
-  border-radius:6px;background:var(--gray-50);color:var(--gray-800);outline:none;transition:var(--transition);font-size:13px}
-.task-field select:focus,.task-field input:focus,.task-field textarea:focus{border-color:var(--primary);
-  background:#fff;box-shadow:0 0 0 3px rgba(15,76,129,.1)}
-.task-field select:disabled,.task-field input:disabled,.task-field textarea:disabled{background:transparent;border-color:transparent}
-.task-field.full{grid-column:1/-1}
-.task-field textarea{resize:vertical;min-height:42px;font-family:inherit}
-
-select.status-select{font-weight:600}
+/* Status select */
+select.status-select{font-weight:600; padding: 4px 8px; border-radius: 6px; font-size:12px; border:1px solid var(--gray-200); outline:none;}
 select.status-select[data-status="Concluída"]{background:var(--status-done-bg);color:var(--status-done-text);border-color:#6ee7b7}
 select.status-select[data-status="Em Andamento"]{background:var(--status-progress-bg);color:var(--status-progress-text);border-color:#93c5fd}
 select.status-select[data-status="A Iniciar"]{background:var(--status-todo-bg);color:var(--status-todo-text);border-color:#d1d5db}
@@ -162,10 +144,14 @@ select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg)
 .modal-body{padding:22px;overflow-y:auto}
 .modal-body label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px;margin-top:14px}
 .modal-body label:first-child{margin-top:0}
-.modal-body input,.modal-body select{width:100%;padding:9px 12px;border:1px solid var(--gray-300);
-  border-radius:var(--radius);outline:none;transition:var(--transition)}
-.modal-body input:focus,.modal-body select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,76,129,.15)}
+.modal-body input,.modal-body select,.modal-body textarea{width:100%;padding:9px 12px;border:1px solid var(--gray-300);
+  border-radius:var(--radius);outline:none;transition:var(--transition); font-family:inherit; font-size:14px;}
+.modal-body input:focus,.modal-body select:focus,.modal-body textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,76,129,.15)}
 .modal-footer{padding:16px 22px;border-top:1px solid var(--gray-100);display:flex;justify-content:flex-end;gap:10px}
+
+/* Modal de tarefa (Mais largo) */
+.modal.task-modal{width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column}
+.modal.task-modal .modal-body{overflow-y:auto}
 
 /* Notificações */
 .notif-panel{position:fixed;top:60px;right:16px;width:340px;max-width:calc(100vw - 32px);background:#fff;
@@ -197,7 +183,6 @@ select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg)
 /* Drag and Drop */
 .drag-handle {cursor: grab;color: var(--gray-400);font-size: 14px;padding: 0 4px;font-weight: bold;user-select: none;}
 .drag-handle:active {cursor: grabbing;}
-.task-card.dragging {opacity: 0.4;border: 2px dashed var(--primary);background: var(--gray-50);}
 
 /* Destaque via notificação */
 @keyframes highlightField {
@@ -216,7 +201,7 @@ select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg)
 .task-title-input {
   width: 100%;
   max-width: 100%;
-  box-sizing: border-box; /* Impede que o padding estoure a largura */
+  box-sizing: border-box;
   padding: 6px 12px;
   border: 1px solid var(--primary);
   border-radius: 6px;
@@ -228,35 +213,10 @@ select.status-select[data-status="Cancelada"]{background:var(--status-cancel-bg)
   box-shadow: 0 0 0 3px rgba(15,76,129,.1);
   font-family: inherit;
   margin-top: 4px;
+}
 
-  /* ===== Cartão de tarefa (resumo) ===== */
-.task-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);
-  padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:var(--transition)}
-.task-card:hover{border-color:var(--primary);box-shadow:var(--shadow-md)}
-.task-card.dragging{opacity:.4}
-.task-card-pending{opacity:.55;pointer-events:none}
-
-.task-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.task-card-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;flex:1}
-.task-card-title .desc{font-size:14px;font-weight:700;color:var(--gray-900);word-break:break-word}
-
-.task-stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:12px;padding-top:12px;
-  border-top:1px solid var(--gray-100)}
-.task-stat{display:flex;flex-direction:column;gap:2px;min-width:90px}
-.task-stat .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)}
-.task-stat .v{font-size:13px;font-weight:700;color:var(--gray-800)}
-
-/* ===== Modal de tarefa ===== */
-.modal.task-modal{width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column}
-.modal.task-modal .modal-body{overflow-y:auto}
-.modal.task-modal .task-field input,
-.modal.task-modal .task-field select,
-.modal.task-modal .task-field textarea{width:100%}
-.modal.task-modal .modal-footer{display:flex;align-items:center;gap:8px}
-.modal.task-modal .attachments{margin-top:16px}
-
+/* Responsivo */
 @media(max-width:600px){
   .task-stats{gap:10px 18px}
   .task-stat{min-width:calc(50% - 10px)}
-}
 }
