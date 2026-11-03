@@ -191,9 +191,10 @@ function renderObjectiveDetail(objId, el) {
   const f = state._taskFilters;
 
   el.innerHTML = `
-    <!-- Margem inferior reduzida para aproximar do filtro -->
-    <div style="position: sticky; top: 59px; z-index: 20; background: var(--gray-100); margin-top: -24px; padding-top: 24px; padding-bottom: 8px;">
+    <!-- CONTAINER STICKY (Cabeçalho e Filtros travados) -->
+    <div style="position: sticky; top: -24px; z-index: 20; background: var(--gray-100); padding-top: 24px; padding-bottom: 12px; margin-top: -24px;">
       
+      <!-- Cabeçalho do Objetivo -->
       <div class="objective-card" style="box-shadow: var(--shadow-md); border: 1px solid var(--gray-200); margin: 0; cursor: pointer; transition: var(--transition); border-radius: var(--radius-lg);" onclick="openObjectiveModal('${compId}', '${o.id}')" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
         <div class="objective-header" style="display: block; padding: 20px; background: #fff; border-radius: var(--radius-lg);">
           
@@ -237,46 +238,47 @@ function renderObjectiveDetail(objId, el) {
               Tarefas: <span style="background: var(--gray-100); padding: 2px 8px; border-radius: 99px; font-size: 12px; margin-left: 4px;">${done}/${allTasks.length} concluídas</span>
               ${late ? `<span class="tag" style="background:var(--status-late-bg); color:var(--status-late-text); font-weight:700; margin-left: 8px;">${late} em atraso</span>` : ''}
             </span>
-            ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="addTask('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
+            ${canAddTask ? `<button class="btn btn-sm btn-ghost" onclick="openNewTaskModal('${compId}','${o.id}')">+ Adicionar tarefa</button>` : ''}
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- BARRA DE FILTROS (Margem superior reduzida) -->
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 8px; margin-bottom: 12px;">
-      
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1;">
-        <input type="text" id="taskSearch" placeholder="Buscar descrição..." value="${escapeHtml(f.search)}" style="padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; width: 200px; outline: none;">
-        
-        <select id="taskFilterResp" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 220px;">
-          <option value="">Todos os responsáveis</option>
-          ${users.map(u => `<option value="${u.id}" ${f.resp===u.id?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
-        </select>
+      <!-- BARRA DE FILTROS -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1;">
+          <input type="text" id="taskSearch" placeholder="Buscar descrição..." value="${escapeHtml(f.search)}" style="padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; width: 200px; outline: none;">
+          
+          <select id="taskFilterResp" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 220px;">
+            <option value="">Todos os responsáveis</option>
+            ${users.map(u => `<option value="${u.id}" ${f.resp===u.id?'selected':''}>${escapeHtml(u.name)}</option>`).join('')}
+          </select>
 
-        <select id="taskFilterStatus" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 150px;">
-          <option value="">Todos os status</option>
-          ${ALL_STATUS.map(s => `<option ${f.status===s?'selected':''}>${s}</option>`).join('')}
-        </select>
+          <select id="taskFilterStatus" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 150px;">
+            <option value="">Todos os status</option>
+            ${ALL_STATUS.map(s => `<option ${f.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
 
-        <select id="taskFilterDelivered" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 150px;">
-          <option value="Todas" ${f.delivered==='Todas'?'selected':''}>Entregue: Todas</option>
-          <option value="Zeradas" ${f.delivered==='Zeradas'?'selected':''}>Entregue: Zeradas</option>
-          <option value="Valoradas" ${f.delivered==='Valoradas'?'selected':''}>Entregue: Valoradas</option>
-        </select>
+          <select id="taskFilterDelivered" style="padding: 8px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; min-width: 150px;">
+            <option value="Todas" ${f.delivered==='Todas'?'selected':''}>Entregue: Todas</option>
+            <option value="Zeradas" ${f.delivered==='Zeradas'?'selected':''}>Entregue: Zeradas</option>
+            <option value="Valoradas" ${f.delivered==='Valoradas'?'selected':''}>Entregue: Valoradas</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btnSortStart" class="btn btn-sm btn-ghost" onclick="toggleSort('startDate', '${compId}', '${o.id}')" style="border: 1px solid var(--gray-300); background: #fff;">
+            Início <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('startDate')}</span>
+          </button>
+          <button id="btnSortEnd" class="btn btn-sm btn-ghost" onclick="toggleSort('endDate', '${compId}', '${o.id}')" style="border: 1px solid var(--gray-300); background: #fff;">
+            Conclusão <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('endDate')}</span>
+          </button>
+        </div>
       </div>
 
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <button id="btnSortStart" class="btn btn-sm btn-ghost" onclick="toggleSort('startDate', '${compId}', '${o.id}')" style="border: 1px solid var(--gray-300); background: #fff;">
-          Início <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('startDate')}</span>
-        </button>
-        <button id="btnSortEnd" class="btn btn-sm btn-ghost" onclick="toggleSort('endDate', '${compId}', '${o.id}')" style="border: 1px solid var(--gray-300); background: #fff;">
-          Conclusão <span style="margin-left: 6px; font-size: 14px;">${getSortIcon('endDate')}</span>
-        </button>
-      </div>
     </div>
 
-    <div id="task-list-container"></div>
+    <!-- LISTA DE TAREFAS -->
+    <div id="task-list-container" style="margin-top: 8px;"></div>
   `;
 
   const refreshList = () => applyTaskFilters(compId, o.id);
