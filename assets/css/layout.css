@@ -16,7 +16,22 @@
 
 .sidebar-brand{display:flex;align-items:center;gap:12px;padding:18px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap}
 .sidebar-brand .logo-mark{width:36px;height:36px;border-radius:8px;flex-shrink:0}
-.sidebar-brand .brand-text h2{font-size:14px;color:#fff;font-weight:700;line-height:1.2;margin-bottom:2px}
+.sidebar-brand .brand-text h2{
+  font-size: 12px; /* Tamanho menor e mais discreto */
+  color: #cbd5e1; /* Branco mais suave */
+  font-weight: 400; /* Remove o negrito */
+  line-height: 1.4;
+  margin: 0;
+  white-space: normal !important; /* Força a quebra de linha */
+  word-wrap: break-word;
+  overflow-wrap: break-word; /* Impede que o texto vaze do container */
+}
+
+/* Certifique-se de que a div que envolve o texto está assim: */
+.sidebar-brand .brand-text {
+  flex: 1;
+  min-width: 0; /* Crucial para permitir que o flexbox quebre a linha */
+}
 .sidebar-brand .brand-text span{font-size:11px;color:#94a3b8;line-height:1.1;display:block}
 .sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;overflow-x:hidden}
 .nav-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;padding:14px 10px 6px;white-space:nowrap}
