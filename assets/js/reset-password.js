@@ -1,5 +1,3 @@
-/* assets/js/reset-password.js */
-
 const $ = id => document.getElementById(id);
 
 (async function bootstrapReset() {
@@ -7,15 +5,12 @@ const $ = id => document.getElementById(id);
   const errDiv = $('resetError');
   const infoDiv= $('resetInfo');
 
-  // Supabase (v2 com PKCE) processa o `?code=...` da URL automaticamente
-  // (detectSessionInUrl: true). Basta aguardar a sessão.
   const { data: { session }, error } = await window.db.auth.getSession();
 
   if (error || !session) {
     form.innerHTML = `<div class="login-error">
       Link inválido ou expirado.<br>
-      <a href="index.html" style="color:inherit;font-weight:700;text-decoration:underline">Voltar ao login</a>
-      e solicite um novo e-mail de redefinição.
+      <a href="index.html" style="color:inherit;font-weight:700;text-decoration:underline">Voltar ao login</a> e solicite um novo e-mail.
     </div>`;
     return;
   }
@@ -28,11 +23,14 @@ const $ = id => document.getElementById(id);
     const pass  = $('resetPass').value;
     const pass2 = $('resetPassConfirm').value;
 
-    if (pass.length < 6) {
-      errDiv.textContent = 'A senha deve ter no mínimo 6 caracteres.';
+    // Validação da Senha Forte (Mín 8, 1 Maiúscula, 1 Especial)
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>_\-+=]).{8,}$/;
+    if (!passwordRegex.test(pass)) {
+      errDiv.textContent = 'A senha deve ter no mínimo 8 caracteres, conter 1 letra maiúscula e 1 caractere especial.';
       errDiv.classList.remove('hidden');
       return;
     }
+
     if (pass !== pass2) {
       errDiv.textContent = 'As senhas não coincidem.';
       errDiv.classList.remove('hidden');
@@ -40,26 +38,23 @@ const $ = id => document.getElementById(id);
     }
 
     const btn = form.querySelector('button[type="submit"]');
-    btn.textContent = 'Salvando...';
-    btn.disabled = true;
+    btn.textContent = 'Salvando...'; btn.disabled = true;
 
     const { error: updateError } = await window.db.auth.updateUser({ password: pass });
 
     if (updateError) {
       errDiv.textContent = 'Erro: ' + updateError.message;
       errDiv.classList.remove('hidden');
-      btn.textContent = 'Salvar nova senha';
-      btn.disabled = false;
+      btn.textContent = 'Salvar nova senha'; btn.disabled = false;
       return;
     }
 
     infoDiv.textContent = 'Senha alterada com sucesso! Redirecionando para o login...';
     infoDiv.classList.remove('hidden');
 
-    // Encerra a sessão para forçar novo login com a senha nova
     setTimeout(async () => {
       await window.db.auth.signOut();
       window.location.href = 'index.html';
-    }, 1200);
+    }, 2000);
   });
 })();
