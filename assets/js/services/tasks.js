@@ -85,26 +85,34 @@ async function updateTask(compId, taskId, field, value){
     });
   }
 
-  // --- LÓGICA DE NOTIFICAÇÕES REFEITA ---
+  // --- LÓGICA DE NOTIFICAÇÕES REFORÇADA ---
   const usersToNotify = new Set();
 
-  // 1. Notificar o Gestor do usuário que está fazendo a alteração
-  if (state.currentUser.gestorId) {
-    usersToNotify.add(state.currentUser.gestorId);
-  } 
-  // 1.1 Fallback: Se não tiver gestor vinculado (ou for nulo), notifica o gestor da empresa
-  else if (state.currentUser.role !== 'unique_collaborator' && state.currentUser.role !== 'admin' && state.currentUser.role !== 'global_collaborator') {
-    const compManager = state.users.find(u => u.role === 'unique_collaborator' && String(u.companyId) === String(state.currentUser.companyId));
-    if (compManager) usersToNotify.add(compManager.id);
+  // 1. Gestor de quem está editando (busca no state, se falhar busca no banco)
+  let managerId = state.currentUser.gestorId;
+  
+  if (!managerId && state.currentUser.role !== 'unique_collaborator' && state.currentUser.role !== 'admin' && state.currentUser.role !== 'global_collaborator') {
+     // Se o frontend estiver desatualizado, busca o gestor diretamente no banco
+     const { data: profile } = await window.db.from('profiles').select('manager_id').eq('id', state.currentUser.id).single();
+     
+     if (profile && profile.manager_id) {
+         managerId = profile.manager_id;
+     } else if (state.currentUser.companyId) {
+         // Se não tiver gestor direto, pega o primeiro gestor da empresa
+         const { data: compManager } = await window.db.from('profiles').select('id').eq('company_id', state.currentUser.companyId).eq('role', 'unique_collaborator').limit(1).single();
+         if (compManager) managerId = compManager.id;
+     }
   }
+  
+  if (managerId) usersToNotify.add(managerId);
 
-  // 2. Notificar o Gestor do responsável atual da tarefa (se for diferente de quem está editando)
+  // 2. Gestor do responsável atual da tarefa
   const currentResp = userById(found.task.responsibleId);
   if (currentResp && currentResp.gestorId) {
     usersToNotify.add(currentResp.gestorId);
   }
 
-  // 3. Se a alteração for a troca de responsável, notifica o novo responsável e o gestor dele
+  // 3. Notifica o novo responsável e o gestor dele (se houver troca)
   if (field === 'responsibleId' && value) {
     usersToNotify.add(value);
     const newResp = userById(value);
@@ -113,15 +121,14 @@ async function updateTask(compId, taskId, field, value){
     }
   }
 
-  // Nunca notificar o próprio usuário que fez a ação
+  // Remove o próprio usuário (para não notificar a si mesmo)
   usersToNotify.delete(state.currentUser.id);
 
-  // Disparar as notificações para todos os envolvidos
+  // Dispara as notificações para o banco
   usersToNotify.forEach(targetId => {
     let msg = `${state.currentUser.name} atualizou "${FIELD_LABELS[field]||field}" da tarefa "${found.task.description || '(sem descrição)'}"`;
     
-    // Personaliza a mensagem caso seja uma atribuição de tarefa
-    if (field === 'responsibleId' && targetId === value) {
+    if (field === 'responsibleId' && String(targetId) === String(value)) {
         msg = `Você foi atribuído(a) à tarefa "${found.task.description || '(sem descrição)'}"`;
     }
 
@@ -130,7 +137,11 @@ async function updateTask(compId, taskId, field, value){
       message: msg,
       task_id: taskId,
       target_field: field
-    }]);
+    }]).then(({error}) => {
+       if (error) {
+         console.error("Erro ao enviar notificação (Verifique RLS):", error);
+       }
+    });
   });
 }
 
