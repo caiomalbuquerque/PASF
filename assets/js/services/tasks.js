@@ -28,6 +28,12 @@ async function updateTask(compId, taskId, field, value){
   const found = findTask(taskId);
   if(!found) return;
 
+    // NOVA TRAVA DE SEGURANÇA
+  if (state.currentUser.role === 'unique_user' && String(found.task.responsibleId) !== String(state.currentUser.id)) {
+    showToast("Você não tem permissão para editar esta tarefa.", "error");
+    return;
+  }
+
   if (String(taskId).startsWith('temp_')) return;
 
   const oldValue = found.task[field];
