@@ -220,4 +220,21 @@ function initRealtime(){
       });
     })
     .subscribe();
+
+  // 4. Canal de Status do Usuário (Para derrubar se for suspenso)
+  window.db.channel(`user_status:${state.currentUser.id}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${state.currentUser.id}` }, payload => {
+      const updatedProfile = payload.new;
+      
+      // Se o status mudou para falso (suspenso), ou se o perfil mudou de ativo para inativo
+      if (updatedProfile.is_active === false) {
+        showToast("Sua conta foi suspensa pelo administrador.", "error");
+        setTimeout(async () => {
+          await window.db.auth.signOut();
+          window.location.href = 'index.html';
+        }, 2000);
+      }
+    })
+    .subscribe();
+  
 }
