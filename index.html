@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="PASF — Plano de Ação para Sustentabilidade Financeira">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+  <link rel="icon" href="assets/css/img/Pasf-logo.png">
   <title>PASF — Entrar</title>
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/login.css">
@@ -12,23 +12,84 @@
 </head>
 <body>
   <div class="login-screen">
-    <div class="login-card">
+    <div class="login-card" style="max-width: 480px;">
+      
       <div class="login-logo">
-        <div class="logo-mark">P</div>
+        <div class="logo-mark" style="background: transparent; overflow: hidden; padding: 0;">
+          <img src="assets/css/img/Pasf-logo.png" alt="Logo PASF" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
         <div>
           <h1>PASF</h1>
           <p>Plano de Ação para Sustentabilidade Financeira</p>
         </div>
       </div>
 
-      <form id="loginForm">
-        <label for="loginEmail">E-mail</label>
-        <input id="loginEmail" type="email" placeholder="seu@email.com" required autocomplete="username">
-        <label for="loginPass">Senha</label>
-        <input id="loginPass" type="password" placeholder="••••••" required autocomplete="current-password">
-        <div id="loginError" class="login-error hidden"></div>
-        <button type="submit" class="submit">Entrar</button>
-      </form>
+      <!-- TELA 1: LOGIN -->
+      <div id="view-login">
+        <form id="loginForm">
+          <label for="loginEmail">E-mail</label>
+          <input id="loginEmail" type="email" placeholder="seu@email.com" required autocomplete="username">
+          <label for="loginPass">Senha</label>
+          <input id="loginPass" type="password" placeholder="••••••" required autocomplete="current-password">
+          <div id="loginError" class="login-error hidden"></div>
+          <button type="submit" class="submit">Entrar</button>
+        </form>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 16px;">
+          <a href="#" onclick="showAuthView('forgot')" style="font-size: 12px; color: var(--primary); font-weight: 600;">Esqueci minha senha</a>
+          <a href="#" onclick="showAuthView('signup')" style="font-size: 12px; color: var(--primary); font-weight: 600;">Criar nova conta</a>
+        </div>
+      </div>
+
+      <!-- TELA 2: CADASTRO -->
+      <div id="view-signup" class="hidden">
+        <h3 style="font-size: 18px; margin-bottom: 16px; color: var(--gray-900);">Criar nova conta</h3>
+        <form id="signupForm">
+          <label>Nome Completo</label>
+          <input id="signupName" type="text" placeholder="Seu nome" required>
+          
+          <label>E-mail</label>
+          <input id="signupEmail" type="email" placeholder="seu@email.com" required>
+          
+          <label>Confirmar E-mail</label>
+          <input id="signupEmailConfirm" type="email" placeholder="Repita seu e-mail" required>
+
+          <label>Unidade (Empresa)</label>
+          <select id="signupCompany" required>
+            <option value="">Carregando empresas...</option>
+          </select>
+          
+          <label>Senha</label>
+          <input id="signupPass" type="password" placeholder="Mín. 8 caracteres, 1 maiúscula, 1 símbolo" required>
+          <div style="font-size: 11px; color: var(--gray-500); margin-top: 4px;">Exigências: 8+ caracteres, 1 letra maiúscula, 1 caractere especial (@, #, $, etc).</div>
+          
+          <label>Confirmar Senha</label>
+          <input id="signupPassConfirm" type="password" placeholder="Repita a senha" required>
+          
+          <div id="signupError" class="login-error hidden"></div>
+          <button type="submit" class="submit">Cadastrar</button>
+        </form>
+        <div style="text-align: center; margin-top: 16px;">
+          <a href="#" onclick="showAuthView('login')" style="font-size: 12px; color: var(--primary); font-weight: 600;">Voltar para o Login</a>
+        </div>
+      </div>
+
+      <!-- TELA 3: RECUPERAR SENHA -->
+      <div id="view-forgot" class="hidden">
+        <h3 style="font-size: 18px; margin-bottom: 16px; color: var(--gray-900);">Recuperar Senha</h3>
+        <p style="font-size: 13px; color: var(--gray-500); margin-bottom: 16px;">Enviaremos um link de redefinição para o seu e-mail.</p>
+        <form id="forgotForm">
+          <label>E-mail</label>
+          <input id="forgotEmail" type="email" placeholder="seu@email.com" required>
+          <div id="forgotError" class="login-error hidden"></div>
+          <div id="forgotSuccess" class="login-success hidden"></div>
+          <button type="submit" class="submit">Enviar Link</button>
+        </form>
+        <div style="text-align: center; margin-top: 16px;">
+          <a href="#" onclick="showAuthView('login')" style="font-size: 12px; color: var(--primary); font-weight: 600;">Voltar para o Login</a>
+        </div>
+      </div>
+
     </div>
   </div>
 
